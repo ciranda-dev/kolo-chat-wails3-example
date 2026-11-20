@@ -30,9 +30,9 @@
 
 | Platform | Install | Version | Status |
 |---|---|---|---|
-| macOS (universal) | `.dmg` or `.zip` | v0.1.14 | Beta, unsigned |
-| Windows (amd64, arm64) | installer `.exe`, `.exe` or `.zip` | v0.1.14 | Beta, unsigned |
-| Linux (amd64, arm64) | `.deb` or `.tar.gz` | v0.1.14 | Beta, unsigned |
+| macOS (universal) | `.dmg` or `.zip` | v0.1.0 | Beta, unsigned |
+| Windows (amd64, arm64) | installer `.exe`, `.exe` or `.zip` | v0.1.0 | Beta, unsigned |
+| Linux (amd64, arm64) | `.deb` or `.tar.gz` | v0.1.0 | Beta, unsigned |
 
 Get the files from the [latest release](https://github.com/ciranda-dev/kolo-chat-wails3-example/releases), with `SHA256SUMS` to check them. They are not signed or notarized, so the system warns before the first run. Build your own with `scripts/release-local.sh` (see [build and test](docs/build-and-test.md)).
 
@@ -59,11 +59,11 @@ GOWORK=off wails3 build
 Once: install the pin and the entry node.
 
 ```sh
-go install github.com/ciranda-dev/kolo-pin/cmd/kolo-pin@v0.1.7
+go install github.com/ciranda-dev/kolo-pin/cmd/kolo-pin@v0.1.0
 ```
 
 ```sh
-go install github.com/ciranda-dev/kolo-node/cmd/kolo-node@v0.1.5
+go install github.com/ciranda-dev/kolo-node/cmd/kolo-node@v0.1.0
 ```
 
 Once: make a private folder for the demo data.
@@ -113,7 +113,7 @@ Computer A runs the entry node, the pin and Alice; computer B runs Bob. `<ip-of-
 Both computers, once: install kolo-node.
 
 ```sh
-go install github.com/ciranda-dev/kolo-node/cmd/kolo-node@v0.1.5
+go install github.com/ciranda-dev/kolo-node/cmd/kolo-node@v0.1.0
 ```
 
 Computer A, terminal 1: the entry node on UDP port 7447. It creates its key file on the first run.

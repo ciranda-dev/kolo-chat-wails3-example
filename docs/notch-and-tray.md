@@ -2,7 +2,7 @@
 
 The **notch** is the black cut-out at the top of some Mac screens, around the camera. The example can show the newest message in a small window that comes down from it. The **tray** is the small icon area of the system: the menu bar on macOS, the notification area on Windows, the tray on Linux.
 
-Both were added on `main` after `step-5`, and they change nothing on the network.
+Both are in this finished chat only, the tutorial does not build them, and they change nothing on the network.
 
 ## Tray (macOS, Windows, Linux)
 

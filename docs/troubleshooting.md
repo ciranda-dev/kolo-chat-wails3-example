@@ -45,7 +45,6 @@
 | `The data folder ... was made by Kolo Chat 0.1.7 or older` | 0.1.8 derives the entry keys from the conversation key, and logs made before cannot change. Quit the example, move or rename the folder the message names (nothing in it is deleted), open the example again and paste a new invite; a founder starts a new conversation and invites everyone again. |
 | `The data folder ... holds the logs of a conversation whose conversation.json is gone` | The folder lost `conversation.json` but still holds your messages, so the example cannot tell which conversation they belong to. Move or rename the folder as above and join again with a new invite. |
 | Two examples never connect, and the log says `hello refused ... (Kolo Chat 0.1.7 or older)` | The other example is 0.1.7 or older. Every member needs 0.1.8 or later. |
-| Every push to a pin fails after the update to 0.1.8 | The pin runs kolo-pin v0.1.3 or older, which refuses the new log headers. Update it to v0.1.4 or later. |
 | `cmd/bootstrap` fails with `address already in use` | Another process holds port 4000. |
 | `key file or its directory is accessible to others` | The data folder or a conversation's folder is open to group or others. Use `chmod 700`. |
 | You left a room and the example enters it again on the next start | The example was started with `-conversation-key-file` or `KOLO_CHAT_CONVERSATION_KEY`, which makes that room again. Take the key and the pins out of the flags and the environment; Leave room says so before you confirm. |
