@@ -1,0 +1,376 @@
+package main
+
+import (
+	"bytes"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	kolokv "github.com/ciranda-dev/kolo-kv"
+	kololog "github.com/ciranda-dev/kolo-log"
+	"github.com/ciranda-dev/kolo-pin"
+)
+
+// group is an owner, A, and two members that joined by invite, B and C, all connected.
+type group struct {
+	n          network
+	a, b, c    *ChatService
+	aev, bev   *events
+	cev        *events
+	bdir, cdir string
+}
+
+func newGroup(t *testing.T) group {
+	t.Helper()
+	g := group{n: newNetwork(t), bdir: dataDir(t), cdir: dataDir(t)}
+	g.a, g.aev = start(t, g.n.config(dataDir(t)))
+	g.b, g.bev = start(t, g.n.joiner(g.bdir))
+	g.c, g.cev = start(t, g.n.joiner(g.cdir))
+	for _, m := range []*ChatService{g.b, g.c} {
+		joinVia(t, g.a, m, false)
+	}
+	linked(t, g.a, g.b)
+	linked(t, g.a, g.c)
+	linked(t, g.b, g.c)
+	return g
+}
+
+func keyOf(c *ChatService) string { return hex.EncodeToString(c.pub) }
+
+// nameOn is the name that c shows for who.
+func nameOn(c, who *ChatService) string {
+	for _, m := range c.Members() {
+		if m.Key == keyOf(who) {
+			return m.Name
+		}
+	}
+	return ""
+}
+
+func sees(t *testing.T, c, who *ChatService, name string) {
+	t.Helper()
+	eventually(t, fmt.Sprintf("%s to be %q", keyOf(who)[:8], name), func() bool { return nameOn(c, who) == name })
+}
+
+func seesRooms(t *testing.T, c *ChatService, want ...string) {
+	t.Helper()
+	eventually(t, fmt.Sprintf("rooms %v", want), func() bool { return slices.Equal(c.Rooms(), want) })
+}
+
+func (e *events) lastMembers() []Member {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if len(e.profiles) == 0 {
+		return nil
+	}
+	return e.profiles[len(e.profiles)-1]
+}
+
+func (e *events) lastRooms() []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if len(e.rooms) == 0 {
+		return nil
+	}
+	return e.rooms[len(e.rooms)-1]
+}
+
+func told(members []Member, who *ChatService) Member {
+	for _, m := range members {
+		if m.Key == keyOf(who) {
+			return m
+		}
+	}
+	return Member{}
+}
+
+// The whole story with three instances joined by invite. Names and rooms reach everybody, also a member that
+// was closed (from the pin, as far as the pin can give it), and only an admin adds rooms.
+func TestProfilesAndRooms(t *testing.T) {
+	g := newGroup(t)
+	a, b, c := g.a, g.b, g.c
+
+	// The founder is the admin and the settler, and B and C know it from the member list.
+	eventually(t, "the member lists", func() bool { return len(b.Members()) == 3 && len(c.Members()) == 3 })
+	if !a.IsAdmin() || b.IsAdmin() || c.IsAdmin() {
+		t.Fatal("A is the only admin")
+	}
+	for _, m := range []*ChatService{b, c} {
+		if first := m.Members()[0]; first.Key != keyOf(a) || !first.Admin || !first.Seat {
+			t.Fatalf("A comes first, as admin and settler: %+v", first)
+		}
+	}
+	for _, m := range []*ChatService{a, b, c} {
+		if !slices.Equal(m.Rooms(), []string{defaultRoom}) {
+			t.Fatalf("every conversation starts with the default room, got %v", m.Rooms())
+		}
+	}
+
+	// Everybody publishes a profile, and everybody sees every name. Names come from each member's own directory.
+	for _, p := range []struct {
+		who          *ChatService
+		name, avatar string
+	}{{a, "Ana", "octopus"}, {b, "Bo", "fox"}, {c, "Cy", "cat-3"}} {
+		if err := p.who.SetProfile(p.name, p.avatar); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, viewer := range []*ChatService{a, b, c} {
+		sees(t, viewer, a, "Ana")
+		sees(t, viewer, b, "Bo")
+		sees(t, viewer, c, "Cy")
+	}
+	members := b.Members()
+	if len(members) != 3 || !members[0].Seat || members[0].Key != keyOf(a) || members[0].Avatar != "octopus" {
+		t.Fatalf("the settler comes first, got %+v", members)
+	}
+
+	// A change of name reaches the owner and C with an event, while everybody is online.
+	if err := b.SetProfile("Bob", "fox"); err != nil {
+		t.Fatal(err)
+	}
+	sees(t, a, b, "Bob")
+	sees(t, c, b, "Bob")
+	eventually(t, "the events", func() bool {
+		return told(g.aev.lastMembers(), b).Name == "Bob" && told(g.cev.lastMembers(), b).Name == "Bob"
+	})
+
+	// The value is sealed: even with the key of the entry, the name is not in the clear.
+	sealed, err := b.dir.Get([]byte(keyProfile))
+	if err != nil || bytes.Contains(sealed, []byte("Bob")) {
+		t.Fatalf("a profile must be stored sealed, got %q, %v", sealed, err)
+	}
+
+	// A profile that is not valid is refused with a typed error, and nothing is written.
+	for name, p := range map[string]Profile{
+		"no name":     {Name: "  ", Avatar: "fox"},
+		"long name":   {Name: strings.Repeat("n", maxName+1)},
+		"control":     {Name: "a\x00b"},
+		"a URL":       {Name: "Bob", Avatar: "https://example.com/bob.png"},
+		"long avatar": {Name: "Bob", Avatar: strings.Repeat("a", maxAvatar+1)},
+	} {
+		if err := b.SetProfile(p.Name, p.Avatar); !errors.Is(err, ErrInvalidProfile) {
+			t.Errorf("%s: got %v", name, err)
+		}
+	}
+	if nameOn(b, b) != "Bob" {
+		t.Fatal("a refused profile changes nothing")
+	}
+
+	// Rooms: the admin adds one and everybody sees it, with an event. A member cannot, and gets a typed error.
+	if err := a.AddRoom("dev"); err != nil {
+		t.Fatal(err)
+	}
+	for _, viewer := range []*ChatService{a, b, c} {
+		seesRooms(t, viewer, defaultRoom, "dev")
+	}
+	eventually(t, "the room events", func() bool {
+		return slices.Equal(g.bev.lastRooms(), []string{defaultRoom, "dev"}) && slices.Equal(g.cev.lastRooms(), []string{defaultRoom, "dev"})
+	})
+	if err := b.AddRoom("random"); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("a member adds no room, got %v", err)
+	}
+	if err := c.AddRoom("random"); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("got %v", err)
+	}
+	for name, want := range map[string]error{"DEV": ErrRoomExists, "general": ErrRoomExists, "": ErrInvalidRoom, "x\ty": ErrInvalidRoom, strings.Repeat("r", maxRoomName+1): ErrInvalidRoom} {
+		if err := a.AddRoom(name); !errors.Is(err, want) {
+			t.Errorf("room %q: got %v", name, err)
+		}
+	}
+	if !slices.Equal(b.Rooms(), []string{defaultRoom, "dev"}) {
+		t.Fatalf("a refused room changes nothing, got %v", b.Rooms())
+	}
+
+	// A message carries its room inside the sealed payload, and only a listed room takes messages.
+	if err := b.Send("nowhere", "hi"); !errors.Is(err, ErrUnknownRoom) {
+		t.Fatalf("got %v", err)
+	}
+	if err := b.Send("dev", "in dev"); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the message in dev", func() bool { return len(g.aev.messages()) == 1 })
+	if m := g.aev.messages()[0]; m.Room != "dev" || m.Text != "in dev" || m.From != keyOf(b) {
+		t.Fatalf("got %+v", m)
+	}
+	stored, _ := b.log.Get(0)
+	if bytes.Contains(stored, []byte("dev")) {
+		t.Fatal("the room must be inside the sealed payload")
+	}
+
+	// C is closed while B changes its name. B puts it on the pin, then B is closed too.
+	if err := c.ServiceShutdown(); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.SetProfile("Bobby", "fox"); err != nil {
+		t.Fatal(err)
+	}
+	sees(t, a, b, "Bobby")
+	eventually(t, "the pin to hold B's directory", func() bool {
+		info, err := pin.Status(t.Context(), b.id, g.n.pin, b.dirLog.ID())
+		return err == nil && info.Entries == 3 // Bo, Bob and Bobby
+	})
+	if err := b.ServiceShutdown(); err != nil {
+		t.Fatal(err)
+	}
+
+	// C comes back with B offline. What it kept shows at once. Then the pin gives it the ciphertext of the new
+	// entry, C derives its key, and the new name shows without B.
+	c2, c2ev := start(t, g.n.joiner(g.cdir))
+	if nameOn(c2, b) != "Bob" || nameOn(c2, a) != "Ana" {
+		t.Fatalf("C shows what it kept: %q, %q", nameOn(c2, b), nameOn(c2, a))
+	}
+	<-c2.pinDone
+	d, err := c2.directory(keyOf(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.rep.Len() != 3 || d.db.Len() != 3 || nameOn(c2, b) != "Bobby" {
+		t.Fatalf("the pin has 3 entries of B, C reads them all and shows %q: have %d, read %d", nameOn(c2, b), d.rep.Len(), d.db.Len())
+	}
+	if msg := c2ev.pin().Error; msg != "" {
+		t.Fatalf("the pull from the pin worked, but the window says %q", msg)
+	}
+	linked(t, a, c2)
+
+	b2, _ := start(t, g.n.joiner(g.bdir))
+	sees(t, c2, b2, "Bobby")
+	sees(t, a, b2, "Bobby")
+	linked(t, b2, c2)
+
+	// Nobody writes a key it does not own. B cannot write in C's directory: it holds a read-only copy.
+	theirs, err := b2.directory(keyOf(c2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := theirs.db.Put([]byte(keyProfile), []byte("Mallory")); !errors.Is(err, kolokv.ErrReadOnly) {
+		t.Fatalf("got %v", err)
+	}
+	// A profile B writes by hand, past the app, is B's profile and only B's.
+	forged, _ := b2.sealValue(keyProfile, Profile{Name: "Mallory"})
+	if err := b2.dir.Put([]byte(keyProfile), forged); err != nil {
+		t.Fatal(err)
+	}
+	b2.directoryChanged()
+	sees(t, a, b2, "Mallory")
+	if nameOn(a, c2) != "Cy" || nameOn(c2, c2) != "Cy" || nameOn(b2, c2) != "Cy" {
+		t.Fatal("C's profile is C's own")
+	}
+	if !a.IsAdmin() || b2.IsAdmin() {
+		t.Fatal("roles do not move")
+	}
+	// A value cannot be moved to another key or another author.
+	if err := a.openValue(b.pub, keyProfile, sealed, &Profile{}); err != nil {
+		t.Fatalf("the value opens where it was written: %v", err)
+	}
+	if a.openValue(b.pub, "other", sealed, &Profile{}) == nil || a.openValue(c.pub, keyProfile, sealed, &Profile{}) == nil {
+		t.Fatal("a value must not open under another key or author")
+	}
+}
+
+// Only an admin invites. A member approved as an admin invites, approves and adds rooms; one approved as a member
+// gets ErrNotAdmin for each.
+func TestInvitedByAnAdmin(t *testing.T) {
+	g := newGroup(t)
+	if _, err := g.b.CreateInvite(InviteOptions{}); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("a member invites, got %v", err)
+	}
+	if err := g.b.Approve(1, false); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("a member approves, got %v", err)
+	}
+	if err := g.b.Deny(1); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("a member denies, got %v", err)
+	}
+	d, _ := start(t, g.n.joiner(dataDir(t)))
+	joinVia(t, g.a, d, true)
+	eventually(t, "D to be an admin", d.IsAdmin)
+	e, _ := start(t, g.n.joiner(dataDir(t)))
+	joinVia(t, d, e, false)
+	linked(t, g.a, e)
+	eventually(t, "the founder to list E", func() bool { return g.a.isAccepted(keyOf(e)) })
+	if err := e.AddRoom("x"); !errors.Is(err, ErrNotAdmin) {
+		t.Fatalf("got %v", err)
+	}
+	if err := d.AddRoom("x"); err != nil {
+		t.Fatal(err)
+	}
+	seesRooms(t, g.a, defaultRoom, "x")
+	if err := e.SetProfile("Dee", "d"); err != nil {
+		t.Fatal(err)
+	}
+	sees(t, g.a, e, "Dee")
+}
+
+// The directory is in the data directory: a restart opens the same log, with the profile in it, and a store
+// that cannot tell its two logs apart is refused rather than guessed.
+func TestDirectorySurvivesARestart(t *testing.T) {
+	n := newNetwork(t)
+	dir := dataDir(t)
+	a, _ := start(t, n.config(dir))
+	if err := a.SetProfile("Ana", "octopus"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.AddRoom("dev"); err != nil {
+		t.Fatal(err)
+	}
+	id := a.dirLog.ID()
+	if err := a.ServiceShutdown(); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(filepath.Join(dir, "directory-log")); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("directory-log: %v, %v", fi, err)
+	}
+	a2, _ := start(t, n.config(dir))
+	if a2.dirLog.ID() != id || nameOn(a2, a2) != "Ana" {
+		t.Fatalf("the directory should be the same: %v, %q", a2.dirLog.ID() == id, nameOn(a2, a2))
+	}
+	// The braid settles its entries after the start, so on a busy machine the rooms and the seat come a moment later.
+	eventually(t, "the rooms and the seat of the braid", func() bool {
+		m := a2.Members()
+		return slices.Equal(a2.Rooms(), []string{defaultRoom, "dev"}) && len(m) == 1 && m[0].Seat
+	})
+	a2.ServiceShutdown()
+
+	if err := os.Remove(filepath.Join(dir, "directory-log")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewChatService(n.config(dir), (&events{}).emit).Start(); err == nil || !strings.Contains(err.Error(), "directory") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+// A pin capability from step 4 covers the messages log only, and is replaced by one for both logs.
+func TestCapabilityCoversBothLogs(t *testing.T) {
+	n := newNetwork(t)
+	dir := dataDir(t)
+	a, _ := start(t, n.config(dir))
+	c, err := pin.ParseCapability(a.tokens[0])
+	if err != nil || !c.Covers(a.log.ID()) || !c.Covers(a.dirLog.ID()) || len(c.Logs) != 2 {
+		t.Fatalf("got %+v, %v", c, err)
+	}
+	messages := a.log.ID()
+	a.ServiceShutdown()
+
+	id, err := loadIdentity(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := pin.Issue(id, pin.Capability{Peer: n.pin.ID, Logs: []kololog.LogID{messages}, Expires: time.Now().Add(time.Hour), Quota: defaultPinQuota})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "pin-tokens", hex.EncodeToString(n.pin.ID)), old, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1100 * time.Millisecond) // the pin refuses two capabilities of the same second
+	a2, _ := start(t, n.config(dir))
+	if c, err := pin.ParseCapability(a2.tokens[0]); err != nil || !c.Covers(a2.dirLog.ID()) {
+		t.Fatalf("got %+v, %v", c, err)
+	}
+}

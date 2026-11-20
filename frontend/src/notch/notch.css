@@ -1,0 +1,292 @@
+@import '../tokens.css';
+
+/* The notch window: 660 x 92 below the camera housing, on the black of the shape the Wails library draws. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+body {
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* The camera housing covers the middle of the top edge: the content starts below it (housing.js). */
+.notch {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: calc(4px + var(--housing-top, 0px)) 8px 6px;
+}
+
+/* The two ends of the top row stay as far apart as the housing is wide. */
+.notch__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: 30px;
+}
+
+.notch__gap {
+  flex: 1;
+  min-width: var(--housing-width, 0px);
+}
+
+.notch__brand {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notch__room {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+}
+
+.chip.is-live {
+  color: var(--text);
+}
+
+.chip.is-live .chip__dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.chip.is-pin-error {
+  color: #ff8f8f;
+}
+
+.chip.is-pin-ok::before,
+.chip.is-pin-waiting::before,
+.chip.is-pin-error::before {
+  content: "·";
+  color: var(--muted);
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.icon-btn svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.notch__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ring {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ring__line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.4;
+}
+
+.ring__dot {
+  fill: var(--text);
+}
+
+.ring__top {
+  fill: var(--muted);
+  transition: fill 150ms;
+}
+
+.ring.is-unread .ring__top {
+  fill: var(--accent);
+}
+
+.ring__text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.notch__message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.notch__name,
+.notch__preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notch__name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+.notch__preview {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.notch__preview.is-hidden-text {
+  color: var(--muted);
+}
+
+.notch__name + .notch__preview.is-hidden-text {
+  color: var(--text);
+}
+
+.notch__unread {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.open-btn {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.open-btn:hover {
+  background: var(--accent-2);
+}
+
+.open-btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* Development only (/notch?mock): the notch at its real size, and one button per state. */
+.mock {
+  padding: 24px;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: text;
+}
+
+html:has(.mock),
+body:has(.mock),
+#root:has(.mock) {
+  overflow: auto;
+  background: var(--bg);
+}
+
+.mock__frame {
+  width: 660px;
+  height: calc(92px + var(--housing-top, 0px));
+  background: #000;
+  outline: 1px dashed var(--border);
+}
+
+.mock__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mock button {
+  font: inherit;
+}
