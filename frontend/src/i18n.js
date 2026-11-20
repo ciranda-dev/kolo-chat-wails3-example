@@ -113,8 +113,7 @@ export const strings = {
     'conv.failed': 'This room could not start.',
     'conv.me': 'Your kolo-id in this room',
     'conv.requests': 'Someone is waiting to join',
-    'start.oldLayout': 'This data folder holds one room of Kolo Chat 0.1.9 or older. Quit Kolo Chat, then move or rename the folder below: nothing in it is deleted. Open Kolo Chat again, then start a new room or paste a new invite.',
-    'start.otherLayout': 'This data folder was made by another version of Kolo Chat. Use that version, or start with another -data.',
+    'start.otherLayout': 'This data folder is in a layout Kolo Chat cannot open. Start with another -data.',
     'start.openFolder': 'Other users of this computer can open the folder below, so they could change what Kolo Chat keeps in it. Quit Kolo Chat, run chmod 700 on the folder, then open Kolo Chat again, or start with another -data. Nothing in it is changed.',
     'state.admin': 'admin',
     'state.settler': 'settles changes',
@@ -146,7 +145,6 @@ export const strings = {
     'state.diverged': 'This app\'s member list differs from the others\'. Leave and join again with an invite.',
     'state.otherGroup': 'This computer has another member list for this room: join with an invite.',
     'state.notListed': 'Waiting for a member to come online with the member list. Until then this room shows nothing, not even from the pins.',
-    'start.layout2': 'This data folder was made by Kolo Chat 0.1.10, whose rooms have no shared member list. Quit Kolo Chat, then move or rename the folder below: nothing in it is deleted. Open Kolo Chat again, then start a new room or paste a new invite.',
   },
   es: {
     'notch.label': 'Kolo Chat, mensaje más reciente',
@@ -261,8 +259,7 @@ export const strings = {
     'conv.failed': 'Esta sala no pudo iniciarse.',
     'conv.me': 'Tu kolo-id en esta sala',
     'conv.requests': 'Alguien espera para unirse',
-    'start.oldLayout': 'Esta carpeta de datos guarda una sala de Kolo Chat 0.1.9 o anterior. Cierra Kolo Chat y mueve o renombra la carpeta de abajo: no se borra nada de ella. Abre Kolo Chat de nuevo y empieza una sala nueva o pega una invitación nueva.',
-    'start.otherLayout': 'Esta carpeta de datos la creó otra versión de Kolo Chat. Usa esa versión o inicia con otro -data.',
+    'start.otherLayout': 'Esta carpeta de datos tiene un formato que Kolo Chat no puede abrir. Inicia con otro -data.',
     'start.openFolder': 'Otros usuarios de este ordenador pueden abrir la carpeta de abajo, así que podrían cambiar lo que Kolo Chat guarda en ella. Cierra Kolo Chat, ejecuta chmod 700 sobre la carpeta y abre Kolo Chat de nuevo, o inicia con otro -data. No se cambia nada de ella.',
     'state.admin': 'admin',
     'state.settler': 'asienta los cambios',
@@ -294,7 +291,6 @@ export const strings = {
     'state.diverged': 'La lista de miembros de esta app difiere de la de los demás. Sal y únete de nuevo con una invitación.',
     'state.otherGroup': 'Esta computadora tiene otra lista de miembros para esta sala: únete con una invitación.',
     'state.notListed': 'Esperando a que un miembro esté en línea con la lista de miembros. Hasta entonces esta sala no muestra nada, tampoco desde los pins.',
-    'start.layout2': 'Esta carpeta de datos la creó Kolo Chat 0.1.10, cuyas salas no tienen una lista de miembros compartida. Cierra Kolo Chat y mueve o cambia el nombre de la carpeta de abajo: no se borra nada de ella. Abre Kolo Chat de nuevo y empieza una sala nueva o pega una invitación nueva.',
   },
   pt: {
     'notch.label': 'Kolo Chat, mensagem mais recente',
@@ -409,8 +405,7 @@ export const strings = {
     'conv.failed': 'Esta sala não pôde iniciar.',
     'conv.me': 'Seu kolo-id nesta sala',
     'conv.requests': 'Alguém espera para entrar',
-    'start.oldLayout': 'Esta pasta de dados guarda uma sala do Kolo Chat 0.1.9 ou anterior. Feche o Kolo Chat e mova ou renomeie a pasta abaixo: nada nela é apagado. Abra o Kolo Chat de novo e comece uma sala nova ou cole um convite novo.',
-    'start.otherLayout': 'Esta pasta de dados foi criada por outra versão do Kolo Chat. Use essa versão ou inicie com outro -data.',
+    'start.otherLayout': 'Esta pasta de dados tem um formato que o Kolo Chat não consegue abrir. Inicie com outro -data.',
     'start.openFolder': 'Outros usuários deste computador podem abrir a pasta abaixo, então poderiam mudar o que o Kolo Chat guarda nela. Feche o Kolo Chat, rode chmod 700 na pasta e abra o Kolo Chat de novo, ou inicie com outro -data. Nada nela é alterado.',
     'state.admin': 'admin',
     'state.settler': 'assenta as mudanças',
@@ -442,7 +437,6 @@ export const strings = {
     'state.diverged': 'A lista de membros deste app difere da dos outros. Saia e entre de novo com um convite.',
     'state.otherGroup': 'Este computador tem outra lista de membros para esta sala: entre com um convite.',
     'state.notListed': 'Esperando um membro ficar online com a lista de membros. Até lá esta sala não mostra nada, nem pelos pins.',
-    'start.layout2': 'Esta pasta de dados foi criada pelo Kolo Chat 0.1.10, cujas salas não têm uma lista de membros compartilhada. Feche o Kolo Chat e mova ou renomeie a pasta abaixo: nada nela é apagado. Abra o Kolo Chat de novo e comece uma sala nova ou cole um convite novo.',
   },
 }
 

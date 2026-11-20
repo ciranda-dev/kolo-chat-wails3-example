@@ -40,21 +40,17 @@ const (
 )
 
 var (
-	// ErrOldDataDirectory matches the *DataDirError of a data directory whose logs were made by 0.1.7 or older.
-	ErrOldDataDirectory = errors.New("data directory made by Kolo Chat 0.1.7 or older")
-
-	errNotDerived = errors.New("its entry keys are not derived from the conversation key (Kolo Chat 0.1.7 or older)")
+	errNotDerived = errors.New("its entry keys are not derived from the conversation key")
 	errBadKey     = errors.New("its signed record does not commit to the derived key")
 )
 
-// DataDirError is returned for a folder this version cannot use, and nothing in it is changed. Layout 1 is a data
-// folder of 0.1.9 or older, which held one conversation; Layout 2 one of 0.1.10, whose conversations have no shared
-// member list; another Layout is one from another version (-1: its
-// layout.json is damaged), and Open one that other users can open. In a conversation's folder, Old says its logs
-// were made by 0.1.7 or older, and neither says a member's conversation.json is gone. Dir is that folder. The binding marshals it, so the window shows how to go on.
+// DataDirError is returned for a folder Kolo Chat cannot use, and nothing in it is changed. A Layout other than the
+// current one is a data folder in another layout (-1: its layout.json is damaged), and Open one that other users can
+// open. In a conversation's folder, Logs says its logs do not use the derived entry keys, and neither says a member's
+// conversation.json is gone. Dir is that folder. The binding marshals it, so the window shows how to go on.
 type DataDirError struct {
 	Dir    string `json:"dir"`
-	Old    bool   `json:"old"`
+	Logs   bool   `json:"logs,omitempty"`
 	Layout int    `json:"layout,omitempty"`
 	Open   bool   `json:"open,omitempty"` // other users can open the folder
 }
@@ -64,28 +60,16 @@ func (e *DataDirError) Error() string {
 	case e.Open:
 		return "The data folder " + e.Dir + " is open to other users, who could change what Kolo Chat keeps in it. " +
 			"Run chmod 700 on it, or start with another -data. Nothing in the folder is changed."
-	case e.Layout == 1:
-		return "The data folder " + e.Dir + " holds one conversation of Kolo Chat 0.1.9 or older, and this version keeps " +
-			"each conversation in a folder of its own. Quit Kolo Chat, move or rename that folder (nothing in it is " +
-			"deleted), then open Kolo Chat again: start a new conversation, or paste a new invite."
-	case e.Layout == 2:
-		return "The data folder " + e.Dir + " was made by Kolo Chat 0.1.10, whose conversations have no shared member " +
-			"list. Quit Kolo Chat, move or rename that folder (nothing in it is deleted), then open Kolo Chat again: start " +
-			"a new conversation, or paste a new invite."
 	case e.Layout != 0:
-		return fmt.Sprintf("The data folder %s was made by another version of Kolo Chat (layout %d). Use that version, "+
-			"or start with another -data. Nothing in the folder is changed.", e.Dir, e.Layout)
+		return fmt.Sprintf("The data folder %s is not in a layout Kolo Chat can open (layout %d). Start with another "+
+			"-data. Nothing in the folder is changed.", e.Dir, e.Layout)
 	}
 	why := "holds the logs of a conversation whose conversation.json is gone"
-	if e.Old {
-		why = "was made by Kolo Chat 0.1.7 or older, and this version cannot use its logs"
+	if e.Logs {
+		why = "holds logs that do not use the derived entry keys, and Kolo Chat cannot use them"
 	}
 	return "The data folder " + e.Dir + " " + why + ". Quit Kolo Chat, move or rename that folder (nothing in it " +
 		"is deleted), then open Kolo Chat again and paste a new invite. An owner starts a new conversation instead."
-}
-
-func (e *DataDirError) Is(target error) bool {
-	return e.Old && target == ErrOldDataDirectory || e.Layout == 1 && target == ErrOldLayout
 }
 
 // pulled runs in the pull section, between the pull and the derivation. Tests hold it there.
@@ -138,7 +122,7 @@ func (c *ChatService) joinHeader() ([]byte, error) {
 func ownLogError(err error, dataDir string, joiner bool) error {
 	switch {
 	case errors.Is(err, kololog.ErrKeyModeMismatch):
-		return &DataDirError{Dir: dataDir, Old: true}
+		return &DataDirError{Dir: dataDir, Logs: true}
 	case errors.Is(err, kololog.ErrSecretMismatch) && joiner:
 		return &DataDirError{Dir: dataDir}
 	case errors.Is(err, kololog.ErrSecretMismatch):

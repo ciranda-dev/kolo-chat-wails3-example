@@ -10,7 +10,7 @@ import { ProfilePanel } from './Profile.jsx'
 import { SettingsPanel } from './Settings.jsx'
 import { SetLanguage } from "../bindings/github.com/ciranda-dev/kolo-chat-wails3-example/notchservice.js"
 import { browserLanguage, t } from './i18n.js'
-import { folderToMove, needsRejoin, startFaultKey } from './fault.js'
+import { folderToMove, startFaultKey } from './fault.js'
 import { convOf, initialState, reduce, shownRows } from './conversations.js'
 import { pinnedNotes } from './pins.js'
 import { netNotes, networkInfo, roomState } from './network.js'
@@ -179,12 +179,6 @@ function App() {
               {startFaultKey(startError) && startFaultKey(startError) !== 'start.moveFolder' ? null : (
                 <p className="fault__text">{errorText(startError)}</p>
               )}
-              {needsRejoin(startError) ? (
-                <p className="fault__hint">
-                  <strong>Join again:</strong> ask a member for a new invite, quit Kolo Chat, delete conversation.json
-                  from the data directory (or start with another -data), open Kolo Chat and paste the invite.
-                </p>
-              ) : null}
               {startFaultKey(startError) ? (
                 <>
                   <p className="fault__hint">{t(lang, startFaultKey(startError))}</p>

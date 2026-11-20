@@ -74,7 +74,6 @@ only. Each connection allows 64 incoming streams per direction, so a busy braid 
   to date with that member. When the pause ends the example closes the connection once, so both braids start fresh. The
   other side gets nothing from us until the pause ends; its window may not show the pause. Both values are not from a
   reference: 10 minutes is ten times the braid's 60 second answer timeout, and 32 is half of the 64 streams.
-- A 0.1.10 example sends untagged streams, which this version cancels: versions do not mix.
 
 ## Proven and accepted
 

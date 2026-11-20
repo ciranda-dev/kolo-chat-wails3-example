@@ -690,7 +690,7 @@ func TestHistoryOrder(t *testing.T) {
 	}
 }
 
-// A message from 0.1.2 or before has no time, and still opens.
+// A message without a time still opens.
 func TestMessageWithoutTimeOpens(t *testing.T) {
 	c := &ChatService{}
 	key, _ := hex.DecodeString(testKey)

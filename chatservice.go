@@ -630,7 +630,7 @@ func (c *ChatService) Send(room, text string) error {
 
 // body is what a message holds before it is sealed: the room, the text and the time on the sender's clock, in Unix
 // milliseconds. The room is inside the sealed bytes, so the pin cannot tell which room a message is for. The time is only as true as the sender's clock, and
-// 0 in a message from 0.1.2 or before.
+// 0 when the sender gave none.
 type body struct {
 	Version int    `json:"v"`
 	Room    string `json:"room"`

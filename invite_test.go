@@ -444,20 +444,16 @@ func TestConversationOfTheDataDirectoryWins(t *testing.T) {
 	}
 }
 
-// A conversation.json of 0.1.1 or older, with one pin, is refused with a sentence that says to join again, and
-// is left as it is. A damaged file is damaged; a list of no pins is a conversation without a pin.
+// A damaged conversation.json is refused and left as it is; a list of no pins is a conversation without a pin.
 func TestLoadConversationFormats(t *testing.T) {
 	b64 := func(b byte) string { return base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{b}, 32)) }
 	key, pinKey, owner := b64(7), b64(9), b64(5)
 	for name, tc := range map[string]struct {
 		body  string
-		old   bool
 		want  string // the start of the error, empty when the file loads
 		found bool
 		pins  int // the pins of a file that loads
 	}{
-		"0.1.1":         {body: `{"key":"` + key + `","pinAddr":"127.0.0.1:7450","pinKey":"` + pinKey + `","owner":"` + owner + `"}`, old: true, want: "conversation.json: made by an older version of Kolo Chat"},
-		"step 4":        {body: `{"key":"` + key + `","pinAddr":"127.0.0.1:7450","pinKey":"` + pinKey + `"}`, old: true, want: "conversation.json: made by an older version of Kolo Chat"},
 		"damaged":       {body: `{"key":`, want: "conversation.json: damaged"},
 		"no pins":       {body: `{"key":"` + key + `","pins":[]}`, found: true, pins: 0},
 		"null pins":     {body: `{"key":"` + key + `","pins":null}`, found: true, pins: 0},
@@ -481,19 +477,6 @@ func TestLoadConversationFormats(t *testing.T) {
 			}
 			if err == nil || !strings.HasPrefix(err.Error(), tc.want) || strings.Contains(err.Error(), dir) {
 				t.Fatalf("got %v, want %q", err, tc.want)
-			}
-			var oe *OldConversationError
-			if errors.As(err, &oe) != tc.old {
-				t.Fatalf("old format %v: %v", !tc.old, err)
-			}
-			if tc.old {
-				if !strings.Contains(err.Error(), "new invite") {
-					t.Fatalf("the sentence does not say to join again: %v", err)
-				}
-				// The window reads rejoin from the error the binding marshals.
-				if b, _ := json.Marshal(&err); !strings.Contains(string(b), `"rejoin":true`) {
-					t.Fatalf("marshaled as %s", b)
-				}
 			}
 			if after, err := os.ReadFile(path); err != nil || string(after) != tc.body {
 				t.Fatalf("the file changed: %q, %v", after, err)

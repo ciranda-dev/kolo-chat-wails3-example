@@ -52,7 +52,7 @@ A message that arrives directly is not in the store yet: the example pulls the s
 The order is the same after every restart:
 
 - one sender's messages keep the order of its log;
-- senders merge by the time on the sender's clock; a time earlier than the sender's previous message, or none (a message from 0.1.2 or before), counts as that previous message's time;
+- senders merge by the time on the sender's clock; a time earlier than the sender's previous message, or none, counts as that previous message's time;
 - equal times go by the sender's key, then by log index.
 
 The history holds the newest 256 messages (`maxHistory`), so its text is at most 16 MiB: the bytes one pin keeps for one member by default (`defaultPinQuota` / `maxMessage`, 16 MiB / 64 KiB). Older messages stay in the store. Messages cannot be deleted.
@@ -100,7 +100,7 @@ A room never ends because the network went away, and it never waits for the netw
 - A founder starts a conversation with Create a room, or from the command line with `KOLO_CHAT_CONVERSATION_KEY` or `-conversation-key-file`, and optionally `-pin` or `-pin-file`; the example creates the conversation's braid.
 - A joiner pastes an invite: the key, the pins and the braid's welcome come from it, once an admin approved the request.
 - Both are kept in `conversation.json` in the conversation's folder (mode 0600), so the next start needs no flags. A folder that lost its `conversation.json` is refused at start, its row names the folder, and nothing in it is deleted, unless it is provably a join that did not finish (see [the data folder](configuration.md#the-data-folder) for the exact rule).
-- A conversation folder whose logs were made by 0.1.7 or older is refused: its logs use random entry keys that only their writer holds, and a log cannot change how it makes its keys. A data folder of 0.1.9 or older, which held one conversation at its top, is refused as a whole (see [configuration.md](configuration.md#the-data-folder)). The window names the folder and says, in your language, what to do: quit, move or rename that folder (nothing in it is deleted), open the example again, and start a new room or paste a new invite. Generate a `-conversation-key` once: running `export KOLO_CHAT_CONVERSATION_KEY=$(openssl rand -hex 32)` again gives a new one, and a new conversation.
+- A conversation folder whose logs use random entry keys, which only their writer holds, is refused: a log cannot change how it makes its keys. A data folder in a layout the example does not know is refused as a whole (see [configuration.md](configuration.md#the-data-folder)). The window names the folder and says, in your language, what to do: quit, move or rename that folder (nothing in it is deleted), open the example again, and start a new room or paste a new invite. Generate a `-conversation-key` once: running `export KOLO_CHAT_CONVERSATION_KEY=$(openssl rand -hex 32)` again gives a new one, and a new conversation.
 
 ## Leaving
 

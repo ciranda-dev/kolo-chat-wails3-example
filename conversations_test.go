@@ -145,42 +145,6 @@ func snapshot(t *testing.T, root string) map[string]string {
 	return out
 }
 
-// T1: a data folder of 0.1.9 or older is refused with the folder named, whichever of its names it holds, and nothing
-// in it changes: no file is added, moved, deleted or rewritten.
-func TestOldDataFolderIsRefused(t *testing.T) {
-	// The names are written out here, not taken from oldLayoutNames, so a shorter list fails this test.
-	for _, name := range []string{"identity.key", "conversation.json", "members.json", "directory-log", "store", "invites", "pin-tokens"} {
-		t.Run(name, func(t *testing.T) {
-			root := dataDir(t)
-			path := filepath.Join(root, name)
-			var err error
-			if name == "store" || name == "invites" || name == "pin-tokens" {
-				if err = os.Mkdir(path, 0o700); err == nil {
-					err = os.WriteFile(filepath.Join(path, "kept"), []byte("old data"), 0o600)
-				}
-			} else {
-				err = os.WriteFile(path, []byte("old "+name), 0o600)
-			}
-			if err == nil {
-				err = os.WriteFile(filepath.Join(root, notchSettingsFile), []byte(`{"enabled":false}`), 0o600)
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			before := snapshot(t, root)
-			_, err = NewConversations(Config{DataDir: root}, (&convEvents{}).emit).Start()
-			var de *DataDirError
-			if !errors.As(err, &de) || de.Layout != 1 || de.Dir != root || !errors.Is(err, ErrOldLayout) ||
-				errors.Is(err, ErrOldDataDirectory) || !strings.Contains(err.Error(), root) || !strings.Contains(err.Error(), "0.1.9 or older") {
-				t.Fatalf("got %v", err)
-			}
-			if after := snapshot(t, root); !mapsEqual(after, before) {
-				t.Fatalf("the folder changed:\n%v\n%v", before, after)
-			}
-		})
-	}
-}
-
 func mapsEqual(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false
@@ -193,9 +157,9 @@ func mapsEqual(a, b map[string]string) bool {
 	return true
 }
 
-// T2: a layout.json of another version, or a damaged one, is refused with its layout and nothing changes.
+// T2: a layout.json of another layout, or a damaged one, is refused with its layout and nothing changes.
 func TestOtherLayoutIsRefused(t *testing.T) {
-	for body, want := range map[string]int{`{"layout":4}`: 4, `{"layout":`: -1, `{}`: -1, `{"layout":1}`: -1} {
+	for body, want := range map[string]int{`{"layout":4}`: 4, `{"layout":1}`: 1, `{"layout":`: -1, `{}`: -1, `{"layout":0}`: -1} {
 		root := dataDir(t)
 		if err := os.WriteFile(filepath.Join(root, layoutFile), []byte(body), 0o600); err != nil {
 			t.Fatal(err)
@@ -203,7 +167,7 @@ func TestOtherLayoutIsRefused(t *testing.T) {
 		before := snapshot(t, root)
 		_, err := NewConversations(Config{DataDir: root}, (&convEvents{}).emit).Start()
 		var de *DataDirError
-		if !errors.As(err, &de) || de.Layout != want || de.Dir != root || errors.Is(err, ErrOldLayout) ||
+		if !errors.As(err, &de) || de.Layout != want || de.Dir != root ||
 			!strings.Contains(err.Error(), fmt.Sprintf("(layout %d)", want)) {
 			t.Fatalf("%s: got %v", body, err)
 		}
@@ -416,11 +380,11 @@ func TestSpecialConversationFileKeepsTheFolder(t *testing.T) {
 	}
 }
 
-// S8: a data folder of 0.1.10, layout 2, is refused with its layout and the sentence to move it, and nothing in it
-// changes: its conversations have no braid, and there is no migration.
-func TestLayoutTwoIsRefused(t *testing.T) {
+// S8: a data folder of another layout is refused with its layout, and nothing in it changes, its conversations
+// included.
+func TestOtherLayoutKeepsItsConversations(t *testing.T) {
 	root := dataDir(t)
-	if err := writeJSON(filepath.Join(root, layoutFile), map[string]int{"layout": 2}); err != nil {
+	if err := writeJSON(filepath.Join(root, layoutFile), map[string]int{"layout": layoutVersion + 1}); err != nil {
 		t.Fatal(err)
 	}
 	conv := filepath.Join(root, conversationDir, strings.Repeat("ab", 16))
@@ -433,7 +397,7 @@ func TestLayoutTwoIsRefused(t *testing.T) {
 	before := snapshot(t, root)
 	_, err := NewConversations(Config{DataDir: root}, (&convEvents{}).emit).Start()
 	var de *DataDirError
-	if !errors.As(err, &de) || de.Layout != 2 || de.Dir != root || !strings.Contains(err.Error(), "0.1.10") {
+	if !errors.As(err, &de) || de.Layout != layoutVersion+1 || de.Dir != root || !strings.Contains(err.Error(), "layout") {
 		t.Fatalf("got %v", err)
 	}
 	if after := snapshot(t, root); !mapsEqual(after, before) {
@@ -880,7 +844,7 @@ func TestConversationThatFailsShowsItsFolder(t *testing.T) {
 	n := newNetwork(t)
 	root := dataDir(t)
 	a, _ := startApp(t, n.app(root))
-	good, damaged, old := mustCreateConv(t, a, "Good"), mustCreateConv(t, a, "Damaged"), mustCreateConv(t, a, "Old")
+	good, damaged, empty := mustCreateConv(t, a, "Good"), mustCreateConv(t, a, "Damaged"), mustCreateConv(t, a, "Empty")
 	a.ServiceShutdown()
 	write := func(id, body string) {
 		if err := os.WriteFile(filepath.Join(root, conversationDir, id, "conversation.json"), []byte(body), 0o600); err != nil {
@@ -888,14 +852,14 @@ func TestConversationThatFailsShowsItsFolder(t *testing.T) {
 		}
 	}
 	write(damaged.ID, `{"key":`)
-	write(old.ID, `{"key":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","pinAddr":"127.0.0.1:7450","pinKey":"AA=="}`)
+	write(empty.ID, `[]`)
 
 	b, _ := startApp(t, n.app(root))
 	rows := map[string]ConversationInfo{}
 	for _, c := range b.List() {
 		rows[c.ID] = c
 	}
-	for id, want := range map[string]string{damaged.ID: "conversation.json: damaged", old.ID: "made by an older version"} {
+	for id, want := range map[string]string{damaged.ID: "conversation.json: damaged", empty.ID: "conversation.json: damaged"} {
 		if r := rows[id]; !strings.Contains(r.Error, want) || r.Folder != filepath.Join(root, conversationDir, id) || r.Me != "" {
 			t.Fatalf("%s: %+v", id, r)
 		}

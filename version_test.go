@@ -12,7 +12,7 @@ func TestStartReportsTheVersion(t *testing.T) {
 	}
 	old := version
 	t.Cleanup(func() { version = old })
-	for _, want := range []string{"dev", "v0.1.15"} {
+	for _, want := range []string{"dev", "v1.2.3"} {
 		version = want
 		a := NewConversations(Config{DataDir: dataDir(t)}, (&convEvents{}).emit)
 		info, err := a.Start()

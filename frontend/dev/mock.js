@@ -12,16 +12,16 @@ const ME_BOOKS = '4f8a2c6e0b1d3f5a7c9e2b4d6f8a1c3e5b7d9f2a4c6e8b1d3f5a7c9e2b4d6f
 
 // The conversations of the scene, from ?scene=: chat (default, three), many (a long list of rooms), own-network, one, none (no conversation, pins set), empty,
 // busy, failed (one did not start), offline (the three rooms are offline, reconnecting and connecting), no-pin (one conversation, no pin), join, join-error, join-wait (no conversation, no pins),
-// start-error, old-layout,
+// start-error, other-layout,
 // nulls (every list of every event and method as null, as Go sends a nil slice) or crash (a member whose name is not text).
 const scene = new URLSearchParams(globalThis.location?.search ?? '').get('scene') || 'chat'
 const ROWS = {
   lake: { id: 'a1b2c3d4e5f60718293a4b5c6d7e8f90', name: 'Lake trip', me: ME, joined: true, admin: false, error: '', folder: '' },
   work: { id: 'b2c3d4e5f60718293a4b5c6d7e8f90a1', name: 'Work', me: ME_WORK, joined: true, admin: true, error: '', folder: '' },
   books: { id: 'c3d4e5f60718293a4b5c6d7e8f90a1b2', name: 'Book club', me: ME_BOOKS, joined: true, admin: false, error: '', folder: '' },
-  old: { id: 'd4e5f60718293a4b5c6d7e8f90a1b2c3', name: 'Old notes', me: '', joined: true, admin: false, error: 'The data folder /Users/maya/Library/Application Support/kolo-chat/conversations/d4e5f60718293a4b5c6d7e8f90a1b2c3 was made by Kolo Chat 0.1.7 or older, and this version cannot use its logs.', folder: '/Users/maya/Library/Application Support/kolo-chat/conversations/d4e5f60718293a4b5c6d7e8f90a1b2c3' },
+  broken: { id: 'd4e5f60718293a4b5c6d7e8f90a1b2c3', name: 'Notes', me: '', joined: true, admin: false, error: 'The data folder /Users/maya/Library/Application Support/kolo-chat/conversations/d4e5f60718293a4b5c6d7e8f90a1b2c3 holds logs that do not use the derived entry keys, and Kolo Chat cannot use them.', folder: '/Users/maya/Library/Application Support/kolo-chat/conversations/d4e5f60718293a4b5c6d7e8f90a1b2c3' },
 }
-const SCENES = { chat: ['lake', 'work', 'books'], many: ['lake', 'work', 'books', 'm0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'], 'own-network': ['lake'], busy: ['lake', 'work', 'books'], failed: ['lake', 'old', 'work'], offline: ['lake', 'work', 'books'], one: ['lake'], 'no-pin': ['lake'], empty: ['lake'], nulls: ['lake'], crash: ['lake'] }
+const SCENES = { chat: ['lake', 'work', 'books'], many: ['lake', 'work', 'books', 'm0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'], 'own-network': ['lake'], busy: ['lake', 'work', 'books'], failed: ['lake', 'broken', 'work'], offline: ['lake', 'work', 'books'], one: ['lake'], 'no-pin': ['lake'], empty: ['lake'], nulls: ['lake'], crash: ['lake'] }
 // The rooms of the long list: a name each, no messages.
 ;['Garden club', 'Apartment 4B', 'Reading group', 'Hiking', 'Board games', 'Movie night', 'Cooking', 'Family', 'Neighbors', 'Chess'].forEach((name, i) => {
   ROWS[`m${i}`] = { id: `${i}`.padStart(2, '0').repeat(16), name, me: ME, joined: true, admin: false, error: '', folder: '' }
@@ -164,8 +164,8 @@ export async function Start() {
   if (scene === 'start-error') {
     throw new Error('kolo-chat: could not open the data folder: permission denied')
   }
-  if (scene === 'old-layout') {
-    throw Object.assign(new Error(`The data folder ${DATA} holds one conversation of Kolo Chat 0.1.9 or older.`), { cause: { dir: DATA, old: false, layout: 1 } })
+  if (scene === 'other-layout') {
+    throw Object.assign(new Error(`The data folder ${DATA} is not in a layout Kolo Chat can open (layout 4).`), { cause: { dir: DATA, layout: 4 } })
   }
   const network = scene === 'own-network' ? { mode: 'own', nodes: ['127.0.0.1:7447', '127.0.0.1:7448'] } : { mode: 'public', nodes: [] }
   return { conversations: list(), maxConversations: 64, hasPins, network, first: rows[0]?.id ?? '', version: 'dev' }

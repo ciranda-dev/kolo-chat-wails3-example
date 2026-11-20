@@ -52,7 +52,7 @@ const SCREENS = [
   { name: 'add-create', scene: 'none', wait: '[aria-label="Invite code"]', steps: [`add()`, `choose(0)`], after: '.modal' },
   { name: 'add-join', scene: 'chat', rows: MESSAGES, steps: [`add()`, `choose(1)`], wait: '.modal' },
   { name: 'offline-room', scene: 'offline', rows: MESSAGES, wait: '.note' },
-  { name: 'failed-conversation', scene: 'failed', rows: MESSAGES, steps: [`room('Old notes')`], wait: '.fault' },
+  { name: 'failed-conversation', scene: 'failed', rows: MESSAGES, steps: [`room('Notes')`], wait: '.fault' },
   { name: 'empty-room', scene: 'empty', wait: '.empty' },
   { name: 'invite', scene: 'chat', rows: MESSAGES, steps: [`room('Work')`, `press('Invite')`, `press('Create invite')`], wait: '.invite__code' },
   { name: 'invite-empty', scene: 'chat', rows: MESSAGES, steps: [`room('Work')`, `press('Invite')`] },
@@ -64,7 +64,7 @@ const SCREENS = [
   { name: 'join-waiting', scene: 'join-wait', wait: '[aria-label="Invite code"]', steps: [`type('[aria-label="Invite code"]', 'kolo-chat-invite:sample-code-for-the-mock-only')`, `document.querySelector('.join__form [type=submit]').click()`] },
   { name: 'join-settings', scene: 'join', wait: '[aria-label="Invite code"]', steps: [`press('Settings')`] },
   { name: 'start-error', scene: 'start-error', wait: '.fault' },
-  { name: 'old-layout', scene: 'old-layout', wait: '.fault' },
+  { name: 'other-layout', scene: 'other-layout', wait: '.fault' },
 ]
 
 const { send, evaluate, until, close } = await openChrome(['--hide-scrollbars', '--lang=en-US', '--force-device-scale-factor=2'])

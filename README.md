@@ -174,15 +174,15 @@ The list on the left, under Rooms, holds your rooms, each with its avatar, its l
 
 The header of a room has its name, how many members it has and how many are online, and the buttons Invite (admins), Members and Profile. Members opens a panel with the member list, the people waiting to be let in and Remove for admins. The composer sits at the bottom, with one line under it: the messages are encrypted and go straight between the members' computers.
 
-A data folder of Kolo Chat 0.1.9 or older, which held one room, is refused at start, and nothing in it is changed: quit the example, move or rename that folder, open the example again, and start a new room or paste a new invite. More in [how it works](docs/how-it-works.md#several-conversations) and [the data folder](docs/configuration.md#the-data-folder).
+A data folder whose `layout.json` names a layout the example does not know is refused at start, and nothing in it is changed: use another `-data`. More in [how it works](docs/how-it-works.md#several-conversations) and [the data folder](docs/configuration.md#the-data-folder).
 
 ## Shared state: the member list
 
-Each room keeps its member list in a braid (`state.go`, `braid.go`): every member writes its own strand, kolo-braid merges them into one order that every peer computes alike, and `applyState` turns that order into the member list (and the list of rooms a conversation holds inside it, which the engine and its API keep; the window uses the first one, `general`). Messages, profiles and offline delivery stay as they were. The chat talks only to the keys on the member list. The braid shares each connection with the chat: every stream starts with a tag byte (`mux.go`), and a braid that breaks the protocol pauses the member list with that member while the chat goes on.
+Each room keeps its member list in a braid (`state.go`, `braid.go`): every member writes its own strand, kolo-braid merges them into one order that every peer computes alike, and `applyState` turns that order into the member list (and the list of rooms a conversation holds inside it, which the engine and its API keep; the window uses the first one, `general`). The chat talks only to the keys on the member list. The braid shares each connection with the chat: every stream starts with a tag byte (`mux.go`), and a braid that breaks the protocol pauses the member list with that member while the chat goes on.
 
 - The founder is an admin and settles changes; an admin approves each request as a member or as an admin, for good. Admins remove members, never the settler. Before the founder leaves, Settings hands settlement over to another admin.
 - Removing is not revocation. Each member's example stops talking to the removed member once it learns of the removal, and an app that is offline learns it later. The removed member keeps the room key: it can still read new messages and profiles from the pins. To keep someone out for good, start a new room without them.
-- At most 64 members. A data folder of 0.1.10 is refused at start, and nothing in it is changed: move it aside, then start a new room or paste a new invite.
+- At most 64 members.
 - kolo-braid is beta: its settlement and membership are model-checked within bounds, which is not a proof, and it was tested on one Mac, on 127.0.0.1 only.
 
 More in [shared state](docs/shared-state.md).

@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	layoutVersion   = 3 // 3: each conversation has a braid
+	layoutVersion   = 3
 	layoutFile      = "layout.json"
 	conversationDir = "conversations"
 	localFile       = "local.json"
@@ -44,12 +44,7 @@ const (
 	maxStateFile    = 16 << 20 // conversation.json, members.json and a pin token: far above what the app writes
 )
 
-// oldLayoutNames are the files a data folder of 0.1.9 or older held at its top, for its one conversation.
-var oldLayoutNames = []string{"identity.key", "conversation.json", "members.json", "directory-log", "store", "invites", "pin-tokens"}
-
 var (
-	// ErrOldLayout matches the *DataDirError of a data folder of 0.1.9 or older (Layout 1).
-	ErrOldLayout            = errors.New("data folder made by Kolo Chat 0.1.9 or older")
 	ErrUnknownConversation  = errors.New("That conversation is not on this computer.")
 	ErrStarting             = errors.New("This room is still connecting. Try again in a moment.")
 	ErrTooManyConversations = errors.New("You have the most rooms this app keeps (see -max-conversations). Leave one first.")
@@ -996,8 +991,8 @@ func (a *Conversations) dropFolder(e *convEntry) {
 	}
 }
 
-// openLayout checks the data folder's layout.json, or writes it in a new folder. A folder of 0.1.9 or older, or of
-// another layout, is refused and nothing in it is changed: there is no migration.
+// openLayout checks the data folder's layout.json, or writes it in a new folder. A folder of another layout is
+// refused and nothing in it is changed.
 func openLayout(root string) error {
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return err
@@ -1011,7 +1006,7 @@ func openLayout(root string) error {
 		var l struct {
 			Layout int `json:"layout"`
 		}
-		if json.Unmarshal(data, &l) != nil || l.Layout < 2 { // no version wrote a layout below 2
+		if json.Unmarshal(data, &l) != nil || l.Layout < 1 {
 			return &DataDirError{Dir: root, Layout: -1}
 		}
 		if l.Layout != layoutVersion {
@@ -1021,13 +1016,8 @@ func openLayout(root string) error {
 			return err
 		}
 		return privateDir(filepath.Join(root, conversationDir))
-	case !errors.Is(err, fs.ErrNotExist): // a special file, a link, or one too large: no version wrote it
+	case !errors.Is(err, fs.ErrNotExist): // a special file, a link, or one too large: the app never writes it
 		return &DataDirError{Dir: root, Layout: -1}
-	}
-	for _, name := range oldLayoutNames {
-		if _, err := os.Lstat(filepath.Join(root, name)); !errors.Is(err, fs.ErrNotExist) {
-			return &DataDirError{Dir: root, Layout: 1}
-		}
 	}
 	if err := os.MkdirAll(filepath.Join(root, conversationDir), 0o700); err != nil {
 		return err

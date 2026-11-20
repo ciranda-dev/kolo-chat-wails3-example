@@ -93,10 +93,10 @@ func TestAuthorizeGivesCiphertextOnly(t *testing.T) {
 	}
 }
 
-// A data directory made by 0.1.7 or older has logs with random entry keys: Start refuses it, for an owner and for a
-// joiner, with an error that names the folder to move aside. Nothing in the folder is changed: the old log opens as
-// before, with its head and its entry, and no log was added.
-func TestOldDataDirectoryIsRefused(t *testing.T) {
+// A data directory whose log has random entry keys is refused at Start, for an owner and for a joiner, with an
+// error that names the folder to move aside. Nothing in the folder is changed: the log opens as before, with its head
+// and its entry, and no log was added.
+func TestRandomKeyLogsAreRefused(t *testing.T) {
 	n := newNetwork(t)
 	for name, cfg := range map[string]func(string) Config{"owner": n.config, "joiner": n.joiner} {
 		dir := dataDir(t)
@@ -105,35 +105,35 @@ func TestOldDataDirectoryIsRefused(t *testing.T) {
 			t.Fatal(err)
 		}
 		st := openStore(t, dir)
-		old, err := st.Create(id)
+		random, err := st.Create(id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := old.Append([]byte("from 0.1.7")); err != nil {
+		if _, err := random.Append([]byte("kept")); err != nil {
 			t.Fatal(err)
 		}
-		head, _ := old.Head()
+		head, _ := random.Head()
 		st.Close()
 
 		_, err = NewChatService(cfg(dir), (&events{}).emit).Start()
 		var de *DataDirError
-		if !errors.Is(err, ErrOldDataDirectory) || !errors.As(err, &de) || de.Dir != dir || !strings.Contains(err.Error(), dir) {
+		if !errors.As(err, &de) || !de.Logs || de.Dir != dir || !strings.Contains(err.Error(), dir) {
 			t.Fatalf("%s: got %v", name, err)
 		}
 
 		st = openStore(t, dir)
 		own, err := ownLogs(st, id)
-		if err != nil || len(own) != 1 || own[0] != old.ID() {
+		if err != nil || len(own) != 1 || own[0] != random.ID() {
 			t.Fatalf("%s: own logs %v, %v", name, own, err)
 		}
-		again, err := st.Open(id, old.ID())
+		again, err := st.Open(id, random.ID())
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 		if h, _ := again.Head(); !bytes.Equal(h.Encode(), head.Encode()) {
 			t.Fatalf("%s: the head changed", name)
 		}
-		if v, err := again.Get(0); err != nil || string(v) != "from 0.1.7" {
+		if v, err := again.Get(0); err != nil || string(v) != "kept" {
 			t.Fatalf("%s: entry %q, %v", name, v, err)
 		}
 		st.Close()
@@ -165,7 +165,7 @@ func TestDataDirectoryWithoutItsConversationIsRefused(t *testing.T) {
 	}
 	_, err := NewChatService(n.joiner(dir), (&events{}).emit).Start()
 	var de *DataDirError
-	if !errors.As(err, &de) || de.Old || de.Dir != dir || errors.Is(err, ErrOldDataDirectory) || errors.Is(err, ErrConfig) {
+	if !errors.As(err, &de) || de.Logs || de.Dir != dir || errors.Is(err, ErrConfig) {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -898,30 +898,23 @@ func TestHostileFlood(t *testing.T) {
 	}
 }
 
-// T1 and T2: the sentence of a refused data folder names it and says what to do, and errors.Is tells the kind.
+// T1 and T2: the sentence of a refused data folder names it and says what to do.
 func TestDataDirErrorSentences(t *testing.T) {
 	for _, tc := range []struct {
 		err       *DataDirError
 		says      string
-		layout    bool
-		oldLogs   bool
 		movesData bool
 	}{
-		{&DataDirError{Dir: "/d", Layout: 1}, "holds one conversation of Kolo Chat 0.1.9 or older", true, false, true},
-		{&DataDirError{Dir: "/d", Layout: 2}, "made by Kolo Chat 0.1.10, whose conversations have no shared member list", false, false, true},
-		{&DataDirError{Dir: "/d", Layout: 4}, "made by another version of Kolo Chat (layout 4)", false, false, false},
-		{&DataDirError{Dir: "/d", Layout: -1}, "(layout -1)", false, false, false},
-		{&DataDirError{Dir: "/d", Old: true}, "0.1.7 or older", false, true, true},
-		{&DataDirError{Dir: "/d", Open: true}, "open to other users", false, false, false},
-		{&DataDirError{Dir: "/d"}, "conversation.json is gone", false, false, true},
+		{&DataDirError{Dir: "/d", Layout: 4}, "not in a layout Kolo Chat can open (layout 4)", false},
+		{&DataDirError{Dir: "/d", Layout: -1}, "(layout -1)", false},
+		{&DataDirError{Dir: "/d", Logs: true}, "do not use the derived entry keys", true},
+		{&DataDirError{Dir: "/d", Open: true}, "open to other users", false},
+		{&DataDirError{Dir: "/d"}, "conversation.json is gone", true},
 	} {
 		msg := tc.err.Error()
 		if !strings.Contains(msg, "/d") || !strings.Contains(msg, tc.says) || !strings.Contains(msg, "othing in") ||
 			strings.Contains(msg, "move or rename") != tc.movesData {
 			t.Errorf("%+v: %q", tc.err, msg)
-		}
-		if errors.Is(tc.err, ErrOldLayout) != tc.layout || errors.Is(tc.err, ErrOldDataDirectory) != tc.oldLogs {
-			t.Errorf("%+v: Is is wrong", tc.err)
 		}
 		if b, _ := json.Marshal(tc.err); tc.err.Layout != 0 && !strings.Contains(string(b), `"layout":`) {
 			t.Errorf("marshaled as %s", b)

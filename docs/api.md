@@ -44,7 +44,7 @@ Events: `chat:conversations` carries the list of `ConversationInfo` as it is, an
 | `chat:state` | the member and room lists changed state: `pending`, `pendingRooms`, `paused` (members the braid is paused with), `settler`, `singleSettler`, and `halted`, `settlementHalted`, `diverged`, `unconfirmed`, `strandLost`, `noAnswer`, `otherGroup`, `notListed` (see [shared-state.md](shared-state.md#what-the-window-says)) |
 
 Errors to match with `errors.Is`: `ErrUnknownConversation`, `ErrStarting`, `ErrTooManyConversations`, `ErrInvalidName`,
-`ErrOldLayout`, `ErrNotAdmin`, `ErrFull`, `ErrSettler`, `ErrUnknownMember`, `ErrWaitingForMember`, `ErrCannotWrite`,
+`ErrNotAdmin`, `ErrFull`, `ErrSettler`, `ErrUnknownMember`, `ErrWaitingForMember`, `ErrCannotWrite`,
 `ErrHandoverStopped`, `ErrInvalidProfile`, `ErrInvalidRoom`, `ErrRoomExists`, `ErrTooManyRooms`, `ErrUnknownRoom`,
 `ErrNotInConversation` and `ErrLeaveNotConfirmed`. A failed join is an `*InviteError` (see
 [how-it-works.md](how-it-works.md#invites)), and a bad setting a `*ConfigError` (see

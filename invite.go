@@ -381,7 +381,7 @@ func (c *ChatService) emitInvite(id invite.ID) {
 func readJoinData(joiner ed25519.PublicKey, raw []byte) (joinData, error) {
 	var d joinData
 	if json.Unmarshal(raw, &d) != nil || len(d.Request) > maxRequest {
-		return d, errors.New("not a join request of this version")
+		return d, errors.New("not a join request")
 	}
 	if _, err := memberHeader(joiner, d.Header); err != nil {
 		return d, err
@@ -556,7 +556,7 @@ func readGrant(payload []byte, owner ed25519.PublicKey, maxPins int) (g grant, e
 		return fmt.Errorf("%w: the accept payload is %s", invite.ErrProtocol, why)
 	}
 	if json.Unmarshal(payload, &g) != nil || g.Version != grantVersion {
-		return g, malformed("not one this version understands")
+		return g, malformed("not one this app understands")
 	}
 	if err := g.conversation.check(maxPins); err != nil {
 		return g, fmt.Errorf("%w: %w", malformed("incomplete"), err)
@@ -618,37 +618,10 @@ func loadConversation(dir string, maxPins int) (v conversation, found bool, err 
 	if json.Unmarshal(data, &v) != nil {
 		return v, false, errors.New("conversation.json: damaged")
 	}
-	if isOldConversation(data) {
-		return v, false, &OldConversationError{File: "conversation.json", Rejoin: true}
-	}
 	if err := v.check(maxPins); err != nil {
 		return v, false, fmt.Errorf("conversation.json: damaged: %w", err)
 	}
 	return v, true, nil
-}
-
-// OldConversationError is returned at start for a conversation.json written by 0.1.1 or older, which kept one
-// pin. The binding marshals it, so the window reads Rejoin and shows how to join again.
-type OldConversationError struct {
-	File   string `json:"file"`
-	Rejoin bool   `json:"rejoin"`
-}
-
-func (e *OldConversationError) Error() string {
-	return e.File + ": made by an older version of Kolo Chat, which kept one pin. Join the conversation again " +
-		"with a new invite: delete this file, or start with another -data directory, and paste the invite."
-}
-
-// isOldConversation says whether data has the single pin of 0.1.1 and older (pinAddr, pinKey) and no list.
-func isOldConversation(data []byte) bool {
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(data, &fields) != nil {
-		return false
-	}
-	_, addr := fields["pinAddr"]
-	_, key := fields["pinKey"]
-	_, pins := fields["pins"]
-	return (addr || key) && !pins
 }
 
 // saveConversation writes conversation.json, mode 0600, with writeFileAtomic.
