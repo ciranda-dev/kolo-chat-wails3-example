@@ -418,7 +418,7 @@ func (c Config) loadPins() ([]pinRef, error) {
 }
 
 // loadRelays returns the relays of -relay and of each -relay-file, or of KOLO_CHAT_RELAYS, checked as one list by
-// kolo-swarm (at most 16, no key or address twice), and where they came from.
+// kolo-swarm (no key or address twice), and where they came from.
 func (c Config) loadRelays() ([]koloswarm.Relay, string, error) {
 	where := ""
 	if c.relaysEnv {
@@ -430,7 +430,7 @@ func (c Config) loadRelays() ([]koloswarm.Relay, string, error) {
 	}
 	for _, path := range c.RelayFiles {
 		rs, err := koloswarm.LoadRelays(path)
-		if err == nil { // checked again with the relays before it: at most 16 in all, no key or address twice
+		if err == nil { // checked again with the relays before it: no key or address twice
 			rs, err = koloswarm.ParseRelays(relaysText(slices.Concat(relays, rs)))
 		}
 		if err != nil {

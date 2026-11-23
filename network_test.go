@@ -111,12 +111,17 @@ func TestBadBootstrapIsRefused(t *testing.T) {
 		_, err := (Config{DataDir: t.TempDir(), Bootstrap: v}).resolve()
 		wantConfigError(t, v, err, ErrMalformed, "bootstrap")
 	}
+}
+
+func TestBootstrapTakesAnyNumberOfNodes(t *testing.T) {
 	var many []string
 	for i := range 17 {
 		many = append(many, fmt.Sprintf("10.0.0.%d:7447", i+1))
 	}
-	_, err := (Config{DataDir: t.TempDir(), Bootstrap: strings.Join(many, ",")}).resolve()
-	wantConfigError(t, "17 nodes", err, ErrMalformed, "bootstrap")
+	set, err := (Config{DataDir: t.TempDir(), Bootstrap: strings.Join(many, ",")}).resolve()
+	if err != nil || !slices.Equal(set.bootstrap, many) {
+		t.Fatalf("17 nodes: %v, %v", set.bootstrap, err)
+	}
 }
 
 // A start without -bootstrap reaches kolo-swarm with an empty BootstrapNodes, which is the public network; with

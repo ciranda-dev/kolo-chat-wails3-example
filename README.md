@@ -208,7 +208,7 @@ Start every example with the same relay, `host:port@key` with the key as 64 hex 
 ./bin/kolo-chat -relay <relay-host>:7448@<relay-key>
 ```
 
-`-relay` repeats or takes a comma list, `-relay-file` reads one or more relays per line and `KOLO_CHAT_RELAYS` is used when neither flag is given; at most 16. Settings shows each relay's state and which setting gave the list. More in [connection relays](docs/configuration.md#connection-relays).
+`-relay` repeats or takes a comma list, `-relay-file` reads one or more relays per line and `KOLO_CHAT_RELAYS` is used when neither flag is given. Settings shows each relay's state and which setting gave the list. More in [connection relays](docs/configuration.md#connection-relays).
 
 ### With the installed macOS app
 
