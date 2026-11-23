@@ -542,7 +542,7 @@ func TestConversationKeySetting(t *testing.T) {
 	cfg := n.app(root)
 	cfg.ConversationKey = testKey
 	keyOf := func(id string) string {
-		v, _, err := loadConversation(filepath.Join(root, conversationDir, id), defaultMaxPins)
+		v, _, err := loadConversation(filepath.Join(root, conversationDir, id), 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -753,7 +753,7 @@ func TestCreateConversation(t *testing.T) {
 	keys := map[string]bool{}
 	for _, id := range []string{x.ID, y.ID} {
 		dir := filepath.Join(root, conversationDir, id)
-		v, found, err := loadConversation(dir, defaultMaxPins)
+		v, found, err := loadConversation(dir, 0)
 		if err != nil || !found || len(v.Key) != 32 {
 			t.Fatalf("%s: %+v, %v", id, v, err)
 		}
@@ -1196,7 +1196,7 @@ func TestStartIsBounded(t *testing.T) {
 	b.ServiceShutdown()
 
 	// The -conversation-key conversation starts first, even when it is the newest.
-	v, _, err := loadConversation(last, defaultMaxPins)
+	v, _, err := loadConversation(last, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

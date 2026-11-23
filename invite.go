@@ -31,8 +31,6 @@ const (
 	defaultInviteTTL  = 24 * time.Hour
 	maxInviteTTL      = 30 * 24 * time.Hour
 	maxInviteUses     = 100
-	maxActiveInvites  = 16 // every active invite takes a topic of the swarm, see openInvites
-	swarmTopics       = 32 // kolo-swarm's largest MaxTopics: the conversation's topic and the invites'
 	joinFindTimeout   = 60 * time.Second
 	joinAnswerTimeout = 10 * time.Minute
 )
@@ -115,8 +113,8 @@ type pendingRequest struct {
 	data joinData
 }
 
-// check says whether the conversation is complete: a key, and at most maxPins pins that can be dialed. A conversation
-// may have none: then it works between members who are online.
+// check says whether the conversation is complete: a key, and pins that can be dialed, at most maxPins when it is
+// set. A conversation may have none: then it works between members who are online.
 func (v conversation) check(maxPins int) error {
 	if len(v.Key) != 32 {
 		return errors.New("wrong key size")
@@ -131,8 +129,7 @@ func inviteOptions() *invite.Options {
 }
 
 // openInvites opens the inviter, which keeps its invites in a store of its own, and runs what it needs next to
-// the swarm: Announce, which joins the topic of every live invite, and the loop of its events. The swarm has
-// room for the conversation's topic and for maxActiveInvites invites.
+// the swarm: Announce, which joins the topic of every live invite, and the loop of its events.
 func (c *ChatService) openInvites() (err error) {
 	if c.invDB, err = kolostore.OpenPebble(filepath.Join(c.set.DataDir, "invites")); err != nil {
 		return err
@@ -168,13 +165,6 @@ func (c *ChatService) CreateInvite(opts InviteOptions) (InviteInfo, error) {
 	}
 	if create.TTL < time.Second || create.TTL > maxInviteTTL || create.MaxUses > maxInviteUses {
 		return InviteInfo{}, fmt.Errorf("An invite lasts from 1 second to %d days and takes 1 to %d uses.", maxInviteTTL/(24*time.Hour), maxInviteUses)
-	}
-	infos, err := c.inv.List()
-	if err != nil {
-		return InviteInfo{}, err
-	}
-	if n := countActive(infos); n >= maxActiveInvites {
-		return InviteInfo{}, fmt.Errorf("You have %d active invites. Revoke one, or wait for one to expire.", n)
 	}
 	code, info, err := c.inv.Create(&create)
 	if err != nil {
@@ -550,7 +540,7 @@ func (c *ChatService) isActive() bool {
 }
 
 // readGrant checks the payload of an accept, which only the inviter could have made: a conversation that is
-// complete, with at most maxPins pins, the inviter's signed log header and a welcome.
+// complete, with at most maxPins pins when it is set, the inviter's signed log header and a welcome.
 func readGrant(payload []byte, owner ed25519.PublicKey, maxPins int) (g grant, err error) {
 	malformed := func(why string) error {
 		return fmt.Errorf("%w: the accept payload is %s", invite.ErrProtocol, why)
@@ -639,15 +629,6 @@ func inviteInfo(i invite.Info) InviteInfo {
 		out.Expires = i.Expires.UTC().Format(time.RFC3339)
 	}
 	return out
-}
-
-func countActive(infos []invite.Info) (n int) {
-	for _, i := range infos {
-		if i.State == invite.Active {
-			n++
-		}
-	}
-	return n
 }
 
 // describeJoin turns an error of kolo-invite into the sentence the joiner's window shows.

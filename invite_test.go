@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -193,9 +194,9 @@ func TestInviteJoinAndChat(t *testing.T) {
 	if fi, err := os.Stat(filepath.Join(bdir, "conversation.json")); err != nil || fi.Mode().Perm() != 0o600 {
 		t.Fatalf("conversation.json: %v, %v", fi, err)
 	}
-	saved, found, err := loadConversation(bdir, defaultMaxPins)
+	saved, found, err := loadConversation(bdir, 0)
 	if err != nil || !found || hex.EncodeToString(saved.Key) != testKey || len(saved.Pins) != 1 || saved.Pins[0].Addr != n.pin.Addr ||
-		!saved.Pins[0].Key.Equal(n.pin.ID) || saved.check(defaultMaxPins) != nil {
+		!saved.Pins[0].Key.Equal(n.pin.ID) || saved.check(0) != nil {
 		t.Fatalf("saved %+v, %v, %v", saved, found, err)
 	}
 
@@ -337,7 +338,7 @@ func TestReadGrantRefusesBadPayloads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g, err := readGrant(good, owner.pub, defaultMaxPins); err != nil || hex.EncodeToString(g.Key) != testKey {
+	if g, err := readGrant(good, owner.pub, 0); err != nil || hex.EncodeToString(g.Key) != testKey {
 		t.Fatalf("got %+v, %v", g, err)
 	}
 	var g grant
@@ -361,15 +362,26 @@ func TestReadGrantRefusesBadPayloads(t *testing.T) {
 		"version 2":     with(func(v *grant) { v.Version = 2 }),
 		"no welcome":    with(func(v *grant) { v.Welcome = nil }),
 	} {
-		if _, err := readGrant(payload, owner.pub, defaultMaxPins); !errors.Is(err, invite.ErrProtocol) {
+		if _, err := readGrant(payload, owner.pub, 0); !errors.Is(err, invite.ErrProtocol) {
 			t.Errorf("%s: got %v", name, err)
 		}
 	}
-	if _, err := readGrant(good, other.pub, defaultMaxPins); !errors.Is(err, invite.ErrProtocol) {
+	if _, err := readGrant(good, other.pub, 0); !errors.Is(err, invite.ErrProtocol) {
 		t.Errorf("a header of another owner: got %v", err)
 	}
-	if g, err := readGrant(with(func(v *grant) { v.Pins = nil }), owner.pub, defaultMaxPins); err != nil || len(g.Pins) != 0 {
+	if g, err := readGrant(with(func(v *grant) { v.Pins = nil }), owner.pub, 0); err != nil || len(g.Pins) != 0 {
 		t.Errorf("a conversation without a pin is complete: %+v, %v", g, err)
+	}
+	set, err := (Config{}).resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pins := make([]pinRef, 17)
+	for i := range pins {
+		pins[i] = pinRef{Addr: fmt.Sprintf("10.0.1.%d:7450", i+1), Key: bytes.Repeat([]byte{byte(i + 1)}, 32)}
+	}
+	if g, err := readGrant(with(func(v *grant) { v.Pins = pins }), owner.pub, set.MaxPins); err != nil || len(g.Pins) != 17 {
+		t.Errorf("without -max-pins an invite may list 17 pins: %d, %v", len(g.Pins), err)
 	}
 }
 
@@ -392,16 +404,20 @@ func TestInviteOptionsAreChecked(t *testing.T) {
 	if exp, err := time.Parse(time.RFC3339, info.Expires); err != nil || time.Until(exp) < 23*time.Hour {
 		t.Fatalf("got %q, %v", info.Expires, err)
 	}
-	for i := 1; i < maxActiveInvites; i++ {
-		mustCreate(t, a, InviteOptions{})
+}
+
+// An admin may keep any number of invites active, and the last of 40 still works.
+func TestManyActiveInvites(t *testing.T) {
+	n := newNetwork(t)
+	a, _ := start(t, n.config(dataDir(t)))
+	var last InviteInfo
+	for range 40 {
+		last = mustCreate(t, a, InviteOptions{TTLSeconds: 3600})
 	}
-	if _, err := a.CreateInvite(InviteOptions{}); err == nil || !strings.Contains(err.Error(), "active invites") {
-		t.Fatalf("got %v", err)
-	}
-	if err := a.Revoke(info.ID); err != nil {
+	b, _ := start(t, n.joiner(dataDir(t)))
+	if err := waitJoin(t, approveJoin(t, a, b.pub, joinAsync(b, last.Code), false)); err != nil {
 		t.Fatal(err)
 	}
-	mustCreate(t, a, InviteOptions{}) // a revoked invite makes room
 }
 
 // A joiner starts without a key or a pin. Pins alone are those of the conversations started in the window, and a
@@ -465,7 +481,7 @@ func TestLoadConversationFormats(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.body), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			v, found, err := loadConversation(dir, defaultMaxPins)
+			v, found, err := loadConversation(dir, 0)
 			if found != tc.found {
 				t.Fatalf("found %v, %v", found, err)
 			}

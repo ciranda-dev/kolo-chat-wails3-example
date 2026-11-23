@@ -21,7 +21,7 @@ The answer to an approved request (the `grant` type in `invite.go`) is encrypted
 - the inviter's signed log header, which names the inviter's key and log ID: what the joiner needs to meet the inviter and pull its log from the pins;
 - the braid's welcome, which makes the joiner's braid.
 
-It does not carry a pin token (see [configuration.md](configuration.md#pins)). A joiner accepts at most `-max-pins` pins from an invite. The joiner sends its own signed log header and the braid's join request as join data, in the same encrypted request, at most 6400 bytes. Every request waits for an admin's approval.
+It does not carry a pin token (see [configuration.md](configuration.md#pins)). A joiner accepts the pins an invite lists, as many as fit in its 1 MiB payload, or at most `-max-pins` when it is set. The joiner sends its own signed log header and the braid's join request as join data, in the same encrypted request, at most 6400 bytes. Every request waits for an admin's approval.
 
 The invite code is a secret too: only the answer of `CreateInvite` has it, and the example logs only the invite ID. `TestInviteJoinAndChat` checks that neither the key (hex or base64) nor a code shows up in the log or in any event. The pin never sees the key or the code.
 

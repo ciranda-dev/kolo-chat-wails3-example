@@ -174,7 +174,7 @@ func TestInviteCarriesEveryPin(t *testing.T) {
 	bdir := dataDir(t)
 	b, _ := start(t, n.joiner(bdir))
 	joinVia(t, a, b, false)
-	saved, found, err := loadConversation(bdir, defaultMaxPins)
+	saved, found, err := loadConversation(bdir, 0)
 	if err != nil || !found || len(saved.Pins) != 2 || saved.Pins[0].Addr != n.pin.Addr || saved.Pins[1].Addr != second.Addr ||
 		!saved.Pins[1].Key.Equal(second.ID) {
 		t.Fatalf("saved %+v, %v", saved, err)

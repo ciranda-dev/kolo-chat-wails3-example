@@ -277,7 +277,7 @@ func (c *ChatService) start() (err error) {
 	c.push = make(chan struct{}, 1)
 	c.resetRelays()
 	// With relays, a peer that cannot be reached directly is reached through one: its Conn works the same.
-	swarmCfg := &koloswarm.Config{LookupInterval: c.set.LookupInterval, MaxTopics: swarmTopics, Relays: c.set.relays, DHT: c.dhtConfig(),
+	swarmCfg := &koloswarm.Config{LookupInterval: c.set.LookupInterval, Relays: c.set.relays, DHT: c.dhtConfig(),
 		BootstrapNodes: c.set.bootstrap, RetryMax: dialRetryMax, Allow: c.allow}
 	if c.sw, err = koloswarm.New(c.ctx, c.set.Listen, c.id, swarmCfg); err != nil {
 		return err

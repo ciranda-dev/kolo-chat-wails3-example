@@ -69,7 +69,7 @@ func TestConfig(t *testing.T) {
 	}
 	set, err := cfg.resolve()
 	if err != nil || len(set.bootstrap) != 0 || set.Listen != publicListen || set.LookupInterval != defaultLookupInterval ||
-		set.MaxPins != defaultMaxPins || len(set.pins) != 1 {
+		set.MaxPins != 0 || len(set.pins) != 1 {
 		t.Fatalf("defaults: %+v, %v", set, err)
 	}
 
@@ -305,7 +305,6 @@ func TestPinListRefused(t *testing.T) {
 		{"multicast", with("224.0.0.1:7450@" + keys[0]), ErrMalformed, "pin"},
 		{"one key at two addresses", with(pins[0], "10.0.0.9:7450@"+keys[0]), ErrMalformed, "pin"},
 		{"more than -max-pins", func() Config { c := with(pins...); c.MaxPins = 2; return c }(), ErrTooMany, "pin"},
-		{"more than the default", with(manyPins(t, defaultMaxPins+1)...), ErrTooMany, "pin"},
 	} {
 		_, err := tc.cfg.resolve()
 		wantConfigError(t, tc.name, err, tc.want, tc.field)
@@ -315,8 +314,8 @@ func TestPinListRefused(t *testing.T) {
 	if set, err := c.resolve(); err != nil || len(set.pins) != 2 {
 		t.Fatalf("exactly -max-pins is fine: %v", err)
 	}
-	if set, err := with(manyPins(t, defaultMaxPins)...).resolve(); err != nil || len(set.pins) != defaultMaxPins {
-		t.Fatalf("exactly the default is fine: %v", err)
+	if set, err := with(manyPins(t, 17)...).resolve(); err != nil || len(set.pins) != 17 {
+		t.Fatalf("without -max-pins any number is fine: %v", err)
 	}
 
 	dir := t.TempDir()

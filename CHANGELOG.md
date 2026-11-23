@@ -10,6 +10,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Changed
 
 - `-bootstrap`, `-relay` and `-relay-file` no longer stop at 16 entries, as kolo-swarm no longer does. Duplicate and clashing relays are still refused.
+- `-max-pins` is 0 by default, no cap: the configuration and an invite may list any number of pins (an invite within kolo-invite's 1 MiB payload). A positive value still refuses more.
+- An admin may keep any number of invites active, not 16, and the swarm no longer caps its topics at 32: every active invite is announced.
 
 ## [0.1.0] - 2026-11-20
 

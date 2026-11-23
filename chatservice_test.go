@@ -389,7 +389,7 @@ func TestOlderDataDirectoryKeepsItsKey(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 	start(t, n.config(dir))
-	if saved, found, err := loadConversation(dir, defaultMaxPins); err != nil || !found || hex.EncodeToString(saved.Key) != testKey {
+	if saved, found, err := loadConversation(dir, 0); err != nil || !found || hex.EncodeToString(saved.Key) != testKey {
 		t.Fatalf("saved %+v, %v, %v", saved, found, err)
 	}
 }
