@@ -249,12 +249,12 @@ func TestProfilesAndRooms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := theirs.db.Put([]byte(keyProfile), []byte("Mallory")); !errors.Is(err, kolokv.ErrReadOnly) {
+	if err := theirs.db.Put(t.Context(), []byte(keyProfile), []byte("Mallory")); !errors.Is(err, kolokv.ErrReadOnly) {
 		t.Fatalf("got %v", err)
 	}
 	// A profile B writes by hand, past the app, is B's profile and only B's.
 	forged, _ := b2.sealValue(keyProfile, Profile{Name: "Mallory"})
-	if err := b2.dir.Put([]byte(keyProfile), forged); err != nil {
+	if err := b2.dir.Put(t.Context(), []byte(keyProfile), forged); err != nil {
 		t.Fatal(err)
 	}
 	b2.directoryChanged()

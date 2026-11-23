@@ -117,7 +117,7 @@ func (c *ChatService) writeProfile(p Profile) error {
 	}
 	c.dirMu.Lock()
 	defer c.dirMu.Unlock()
-	return c.dir.Put([]byte(keyProfile), sealed)
+	return c.dir.Put(context.Background(), []byte(keyProfile), sealed)
 }
 
 // profileOf reads the profile in a member's own directory, and nothing else of it. It returns the zero Profile
