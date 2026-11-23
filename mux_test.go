@@ -14,9 +14,8 @@ import (
 
 const testWait = 300 * time.Millisecond
 
-// muxPair is a kolo-secure connection on 127.0.0.1 with maxStreams per direction: the client's end as it is, and the
-// server's end split by a mux whose accept loops run, with a short wait.
-func muxPair(t *testing.T) (*kolosecure.Conn, *mux, chan struct{}) {
+// securePair is a kolo-secure connection on 127.0.0.1 with maxStreams per direction: the client's and the server's end.
+func securePair(t *testing.T) (*kolosecure.Conn, *kolosecure.Conn) {
 	t.Helper()
 	ctx := t.Context()
 	sid, _ := koloid.Generate()
@@ -40,6 +39,13 @@ func muxPair(t *testing.T) (*kolosecure.Conn, *mux, chan struct{}) {
 	t.Cleanup(func() { client.Close() })
 	server := <-accepted
 	t.Cleanup(func() { server.Close() })
+	return client, server
+}
+
+// muxPair is a securePair whose server's end is split by a mux whose accept loops run, with a short wait.
+func muxPair(t *testing.T) (*kolosecure.Conn, *mux, chan struct{}) {
+	t.Helper()
+	client, server := securePair(t)
 	m := newMux(server)
 	m.wait = testWait
 	done := make(chan struct{})
@@ -266,4 +272,41 @@ func TestMuxEndsWithTheConnection(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("a handoff goroutine outlived the connection")
 	}
+}
+
+// noBidi is a connection whose bidi accept ends when end is closed, while its uni streams go on.
+type noBidi struct {
+	*kolosecure.Conn
+	end chan struct{}
+}
+
+func (c noBidi) AcceptStream(ctx context.Context) (*kolotransport.Stream, error) {
+	select {
+	case <-c.end:
+		return nil, io.EOF
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// One accept loop ends without waiting for the streams of the other, and so does not race its handoffs.
+func TestMuxAcceptLoopsEndApart(t *testing.T) {
+	c, server := securePair(t)
+	conn := noBidi{server, make(chan struct{})}
+	m := newMux(conn)
+	m.wait = testWait
+	uni, bidi := make(chan struct{}), make(chan struct{})
+	go func() { m.acceptUni(); close(uni) }()
+	go func() { m.acceptBidi(); close(bidi) }()
+	sendUni(t, c, []byte("bnobody takes this"))
+	time.Sleep(testWait) // not a sync point: the uni handoff must not be ordered before the bidi loop ends
+	close(conn.end)
+	select {
+	case <-bidi:
+	case <-time.After(5 * time.Second):
+		t.Error("the bidi loop waited for a uni stream")
+	}
+	server.Close()
+	<-uni
+	<-bidi
 }
