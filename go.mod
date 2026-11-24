@@ -3,19 +3,19 @@ module github.com/ciranda-dev/kolo-chat-wails3-example
 go 1.26.0
 
 require (
-	github.com/ciranda-dev/kolo-braid v0.1.0
-	github.com/ciranda-dev/kolo-dht v0.1.0
+	github.com/ciranda-dev/kolo-braid v0.1.1
+	github.com/ciranda-dev/kolo-dht v0.1.1
 	github.com/ciranda-dev/kolo-id v0.1.0
-	github.com/ciranda-dev/kolo-invite v0.1.0
-	github.com/ciranda-dev/kolo-kv v0.1.0
+	github.com/ciranda-dev/kolo-invite v0.1.1
+	github.com/ciranda-dev/kolo-kv v0.1.1
 	github.com/ciranda-dev/kolo-log v0.1.0
-	github.com/ciranda-dev/kolo-pin v0.1.0
-	github.com/ciranda-dev/kolo-relay v0.1.0
-	github.com/ciranda-dev/kolo-secure v0.1.0
+	github.com/ciranda-dev/kolo-pin v0.1.1
+	github.com/ciranda-dev/kolo-relay v0.1.1
+	github.com/ciranda-dev/kolo-secure v0.1.1
 	github.com/ciranda-dev/kolo-store v0.1.0
-	github.com/ciranda-dev/kolo-swarm v0.1.0
-	github.com/ciranda-dev/kolo-sync v0.1.0
-	github.com/ciranda-dev/kolo-transport v0.1.0
+	github.com/ciranda-dev/kolo-swarm v0.1.1
+	github.com/ciranda-dev/kolo-sync v0.1.1
+	github.com/ciranda-dev/kolo-transport v0.1.1
 	github.com/wailsapp/wails/v3 v3.0.0
 	golang.org/x/crypto v0.59.0
 	golang.org/x/sys v0.50.0
