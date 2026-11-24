@@ -70,7 +70,7 @@ func TestOnlyDerivedLogsAreAccepted(t *testing.T) {
 	for name, l := range map[string]*kololog.Log{"random keys": random, "epoch 0": epoch0} {
 		payload, _ := json.Marshal(grant{Version: grantVersion, Header: l.Header().Encode(), Welcome: []byte{1}, conversation: conversation{
 			Key: make([]byte, 32), Pins: []pinRef{{Addr: "127.0.0.1:1", Key: id.PublicKey()}}}})
-		if _, err := readGrant(payload, id.PublicKey(), defaultMaxPins); (err == nil) != (l == epoch0) {
+		if _, err := readGrant(payload, id.PublicKey(), 0); (err == nil) != (l == epoch0) {
 			t.Errorf("a grant with %s: %v", name, err)
 		}
 	}

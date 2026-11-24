@@ -15,7 +15,7 @@ Every setting is a flag or an environment variable; a flag wins, and for a list 
 | none | `KOLO_CHAT_PIN_TOKEN` | | the tokens in the variable, comma-separated. There is no `-pin-token` flag, for the reason of the key. The files replace it |
 | `-pin-ttl` | `KOLO_CHAT_PIN_TTL` | `720h` | lifetime of the capabilities the example issues |
 | `-pin-quota` | `KOLO_CHAT_PIN_QUOTA` | `16777216` | bytes each pin may keep for you, in the capabilities the example issues |
-| `-max-pins` | `KOLO_CHAT_MAX_PINS` | `16` | the most pins accepted, from the configuration and from an invite |
+| `-max-pins` | `KOLO_CHAT_MAX_PINS` | `0` (no cap) | the most pins accepted, from the configuration and from an invite |
 | `-lookup-interval` | `KOLO_CHAT_LOOKUP_INTERVAL` | `5s` | time between lookups of the topic |
 | `-max-conversations` | `KOLO_CHAT_MAX_CONVERSATIONS` | `64` | the most conversations (rooms in the window) the example keeps, from 1 to 256, the join that waits for an answer included. Create and Join past it fail with `ErrTooManyConversations`. At start only that many run, the `-conversation-key` one first, then the oldest; the others are listed as not started, nothing in their folders changes, and a Leave starts the oldest that waits |
 | `-relay` | `KOLO_CHAT_RELAYS` | none | connection relays as `host:port@key`, KEY being the relay's public key in hex. Comma-separated, and the flag is repeatable. The variable is read only when neither `-relay` nor `-relay-file` is given (see below) |
@@ -106,7 +106,7 @@ A pin file holds one or more `IP:PORT@KEY` per line, comma-separated; `#` starts
 127.0.0.1:7451@KEY2   # the second one
 ```
 
-The pins of `-pin` come first, then those of each `-pin-file`, in order. A pin listed twice the same way counts once; the same key at two addresses is refused. Addresses are IPv4 with a port from 1 to 65535. More than `-max-pins` pins is refused (`ErrTooMany`); the default, 16, is the bound Kolo's node uses for a list of peer addresses. Settings shows the pins in use, each with its state; they are set at start, not in the window.
+The pins of `-pin` come first, then those of each `-pin-file`, in order. A pin listed twice the same way counts once; the same key at two addresses is refused. Addresses are IPv4 with a port from 1 to 65535. By default there is no cap: an invite's pins must fit in kolo-invite's 1 MiB payload, which holds at most about 14,000, and the example pushes to every pin at once, each on its own connection. With `-max-pins` set, more pins than that is refused (`ErrTooMany`), from the configuration and from an invite. Settings shows the pins in use, each with its state; they are set at start, not in the window.
 
 Each pin listens on the address `kolo-pin run` gives it (`127.0.0.1:7450` unless told otherwise). To accept only your people, start it with `-owners` and list the kolo-id of every member, joiners included. Each conversation has its own kolo-id: the terminal prints it when the conversation starts, and Settings shows it.
 
@@ -169,4 +169,4 @@ A pin is never reached through a relay: it needs an address every member reaches
 
 ## Invites
 
-An invite lasts from 1 second to 30 days (one day when you give no expiry) and takes 1 to 100 uses (one when you give none). You can have 16 active invites at a time in each conversation: each one takes a topic of the swarm, which the example opens with room for them (kolo-swarm's largest `MaxTopics`, 32). Give invites a short expiry.
+An invite lasts from 1 second to 30 days (one day when you give no expiry) and takes 1 to 100 uses (one when you give none). There is no cap on active invites: each one keeps a topic of the swarm joined and announced, about 7 KiB and 2 goroutines (kolo-swarm's measure), until it expires, is used up or is revoked. Give invites a short expiry.

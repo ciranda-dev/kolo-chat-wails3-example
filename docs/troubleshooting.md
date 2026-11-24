@@ -25,12 +25,12 @@
 | A pin or a relay with an allow list refuses one room only | Each room has its own kolo-id: add each one to the pin's `-owners` or the relay's `-allow-file`. Settings shows it under "Your kolo-id in this room". |
 | A relay says "is full" with several rooms | Each room holds its own place: run the relay with a higher `-relay-max-conns-per-ip`. |
 | `kolo-chat: -pin is malformed` | Write each pin as `IP:PORT@KEY` with an IPv4 address. `-pin-key` is gone: the key goes after the `@`. |
-| `kolo-chat: -pin lists too many pins` | List fewer pins, or raise `-max-pins`. |
+| `kolo-chat: -pin lists too many pins` | List fewer pins, or raise or unset `-max-pins`. |
 | `kolo-chat: -relay is malformed` | Write each relay as `host:port@key` with an IPv4 address or a host name and the relay's 64 hex character key. |
 | "Connection relay ...: answered with another key" | The key after the `@` is not that relay's: copy it again from the line the relay printed at start (`identity key=...`) and restart the example. |
 | "Connection relay ...: refused this example" | The relay runs with `-allow-file` and your kolo-id is not in it. |
 | Two examples behind strict NATs never connect, with a relay ready on both | Both must list the same relay: the invite does not carry the list. |
-| "The invite lists more pins than this example accepts" | Start the example with a larger `-max-pins` and join again. |
+| "The invite lists more pins than this example accepts" | Start the example with a larger `-max-pins`, or without it, and join again. |
 | "Could not reach the person who invited you" | The inviter is offline, or has not announced the invite yet. Try again in a few seconds. |
 | "This invite has expired", "...no uses left", "...was revoked" | Ask for a new invite. |
 | "The pin at 127.0.0.1:7450 is unreachable" | Start the pin (terminal 2 of [Try it](try-it.md)). |

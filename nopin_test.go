@@ -35,7 +35,7 @@ func TestConversationWithoutAPin(t *testing.T) {
 	}
 	af := engineOf(t, alice, conv.ID)
 	dir := filepath.Join(aroot, conversationDir, conv.ID)
-	if saved, found, err := loadConversation(dir, defaultMaxPins); err != nil || !found || len(saved.Pins) != 0 {
+	if saved, found, err := loadConversation(dir, 0); err != nil || !found || len(saved.Pins) != 0 {
 		t.Fatalf("saved %+v, %v, %v", saved, found, err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "pin-tokens")); err == nil {
@@ -58,7 +58,7 @@ func TestConversationWithoutAPin(t *testing.T) {
 	bob, bev := startApp(t, bcfg)
 	binfo := joinConv(t, af, bob, inv.Code, "Family")
 	bdir := filepath.Join(bcfg.DataDir, conversationDir, binfo.ID)
-	if saved, found, err := loadConversation(bdir, defaultMaxPins); err != nil || !found || len(saved.Pins) != 0 {
+	if saved, found, err := loadConversation(bdir, 0); err != nil || !found || len(saved.Pins) != 0 {
 		t.Fatalf("Bob saved %+v, %v, %v", saved, found, err)
 	}
 	eventually(t, "Bob to get the earlier message", func() bool { return hasText(bev.of(binfo.ID).messages(), "one") })

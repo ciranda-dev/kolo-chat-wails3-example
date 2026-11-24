@@ -27,7 +27,6 @@ const (
 	defaultPinTTL         = 30 * 24 * time.Hour
 	defaultPinQuota       = 16 << 20 // bytes
 	defaultLookupInterval = 5 * time.Second
-	defaultMaxPins        = 16       // kolo-node's bound on a configured list of peer addresses
 	maxPinFile            = 64 << 10 // kolo-node's bound on a configuration file, in bytes
 	// defaultMaxConversations bounds the engines one app runs, each with its own socket, swarm and two stores.
 	defaultMaxConversations = 64
@@ -73,7 +72,7 @@ type Config struct {
 	PinTokens           []string      // KOLO_CHAT_PIN_TOKEN (not a flag, as for the key): capabilities in hex for the conversation of the key, issued by its kolo-id, each for one of the pins. Default: the app issues one per pin
 	PinTTL              time.Duration // -pin-ttl, KOLO_CHAT_PIN_TTL: lifetime of the capabilities the app issues. Default 720h
 	PinQuota            uint64        // -pin-quota, KOLO_CHAT_PIN_QUOTA: bytes each pin may keep for you, in the capabilities the app issues. Default 16777216
-	MaxPins             int           // -max-pins, KOLO_CHAT_MAX_PINS: the most pins accepted, configured or from an invite. Default 16
+	MaxPins             int           // -max-pins, KOLO_CHAT_MAX_PINS: the most pins accepted, configured or from an invite. Default 0, no cap
 	LookupInterval      time.Duration // -lookup-interval, KOLO_CHAT_LOOKUP_INTERVAL: time between topic lookups. Default 5s
 	MaxConversations    int           // -max-conversations, KOLO_CHAT_MAX_CONVERSATIONS: the most conversations, the pending join included, from 1 to 256. Default 64
 	Relays              []string      // -relay: connection relays as host:port@key, comma-separated, repeatable
@@ -128,7 +127,7 @@ func LoadConfig(args []string, getenv func(string) string, stderr io.Writer) (Co
 		{"pin-token-file", "KOLO_CHAT_PIN_TOKEN_FILE", "file of capabilities in hex for the conversation of the key, one per pin at most, readable by you only, repeatable (default: issued by the app)", list(&c.PinTokenFiles, false), &c.PinTokenFiles},
 		{"pin-ttl", "KOLO_CHAT_PIN_TTL", "lifetime of the capabilities the app issues (default 720h)", dur(&c.PinTTL), nil},
 		{"pin-quota", "KOLO_CHAT_PIN_QUOTA", "bytes each pin may keep for you (default 16777216)", num(&c.PinQuota), nil},
-		{"max-pins", "KOLO_CHAT_MAX_PINS", "the most pins accepted, configured or from an invite (default 16)", count(&c.MaxPins), nil},
+		{"max-pins", "KOLO_CHAT_MAX_PINS", "the most pins accepted, configured or from an invite (default 0, no cap)", count(&c.MaxPins), nil},
 		{"lookup-interval", "KOLO_CHAT_LOOKUP_INTERVAL", "time between lookups of the topic (default 5s)", dur(&c.LookupInterval), nil},
 		{"max-conversations", "KOLO_CHAT_MAX_CONVERSATIONS", "the most conversations this app keeps, from 1 to 256 (default 64)", count(&c.MaxConversations), nil},
 	} {
@@ -233,11 +232,8 @@ func (c Config) resolve() (settings, error) {
 	if s.LookupInterval == 0 {
 		s.LookupInterval = defaultLookupInterval
 	}
-	switch {
-	case s.MaxPins == 0:
-		s.MaxPins = defaultMaxPins
-	case s.MaxPins < 0:
-		return s, &ConfigError{Setting: "max-pins", Err: fmt.Errorf("%w: want a positive number", ErrMalformed)}
+	if s.MaxPins < 0 {
+		return s, &ConfigError{Setting: "max-pins", Err: fmt.Errorf("%w: want 0 or a positive number", ErrMalformed)}
 	}
 	switch {
 	case s.MaxConversations == 0:
@@ -358,9 +354,9 @@ func checkPinAddr(addr string) error {
 	return nil
 }
 
-// checkPins says whether pins is a list the app can use: at most max pins, each one valid, no key twice.
+// checkPins says whether pins is a list the app can use: at most max pins (0 is no cap), each one valid, no key twice.
 func checkPins(pins []pinRef, max int) error {
-	if len(pins) > max {
+	if max > 0 && len(pins) > max {
 		return fmt.Errorf("%w: more than %d (see -max-pins)", ErrTooMany, max)
 	}
 	seen := map[string]bool{}
