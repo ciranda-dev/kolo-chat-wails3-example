@@ -20,6 +20,6 @@ cd kolo-chat-wails3-starter
 git checkout step-3
 ```
 
-This repository (`main`, tag `v0.1.0`) is the finished app. It also has the tray and the notch window (see [notch-and-tray.md](notch-and-tray.md)), which the tutorial does not build.
+This repository (`main`, tag `v0.1.1`) is the finished app. It also has the tray and the notch window (see [notch-and-tray.md](notch-and-tray.md)), which the tutorial does not build.
 
 The repository has no `go.work` and no `replace`, so build with `GOWORK=off` when this folder sits inside a Go workspace.
