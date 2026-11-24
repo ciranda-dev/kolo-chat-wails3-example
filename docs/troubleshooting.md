@@ -6,7 +6,7 @@
 | "Connecting..." (a dot in the list) for a while after the example opens | The example starts the rooms four at a time so the entry nodes, which let one address send 50 requests a second, are not flooded: 40 rooms took 21 seconds to come up in the test on loopback, so 64 take about half a minute; the room on screen and the ones with the newest messages come first. Open a room and it starts next. Nothing is lost while it waits. |
 | "Reconnecting..." | The last connection to a peer ended, because the peer closed the example or the network changed. The room looks for it for 45 seconds, then says "Nobody else online". What you typed is kept and the peer shows it, once, when it is back. |
 | You typed while offline and the other side has nothing yet | It arrives when the connection returns, from you if you are online together or from the pin if you have one. The log of the room keeps it across a restart. |
-| `kolo-chat: -bootstrap is malformed` | Write each entry node as `host:port`, with an IPv4 address or a host name and a port from 1 to 65535, comma-separated, at most 16. |
+| `kolo-chat: -bootstrap is malformed` | Write each entry node as `host:port`, with an IPv4 address or a host name and a port from 1 to 65535, comma-separated. |
 | `kolo-chat: -conversation-key is required` | You set `KOLO_CHAT_PIN_TOKEN` without a key: a token is for the conversation of the key only. Unset it, or set the key. |
 | `kolo-chat: -pin-file is malformed: <path> lists no pin` | The file has no `IP:PORT@KEY` entry, only comments or blank lines. Add a pin or leave `-pin-file` out: the pin is optional. |
 | "No pin: messages reach people only while they are online" (the line under the room list) | Not a fault: without a pin, messages reach people only while they are online. To keep them for people who are offline, run a pin and start the example with `-pin` or `-pin-file`. |
@@ -26,7 +26,7 @@
 | A relay says "is full" with several rooms | Each room holds its own place: run the relay with a higher `-relay-max-conns-per-ip`. |
 | `kolo-chat: -pin is malformed` | Write each pin as `IP:PORT@KEY` with an IPv4 address. `-pin-key` is gone: the key goes after the `@`. |
 | `kolo-chat: -pin lists too many pins` | List fewer pins, or raise `-max-pins`. |
-| `kolo-chat: -relay is malformed` | Write each relay as `host:port@key` with an IPv4 address or a host name and the relay's 64 hex character key, at most 16 in all. |
+| `kolo-chat: -relay is malformed` | Write each relay as `host:port@key` with an IPv4 address or a host name and the relay's 64 hex character key. |
 | "Connection relay ...: answered with another key" | The key after the `@` is not that relay's: copy it again from the line the relay printed at start (`identity key=...`) and restart the example. |
 | "Connection relay ...: refused this example" | The relay runs with `-allow-file` and your kolo-id is not in it. |
 | Two examples behind strict NATs never connect, with a relay ready on both | Both must list the same relay: the invite does not carry the list. |

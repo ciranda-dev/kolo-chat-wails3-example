@@ -39,8 +39,7 @@ var errPartClosed = errors.New("mux: part closed")
 // mux splits one connection into parts by the tag of each stream.
 type mux struct {
 	conn koloswarm.Conn
-	wait time.Duration  // for a stream's tag: sendTimeout, shorter in tests
-	wg   sync.WaitGroup // the handoff goroutines, which end with the connection
+	wait time.Duration // for a stream's tag: sendTimeout, shorter in tests
 
 	mu    sync.Mutex
 	parts map[byte]*muxConn
@@ -85,28 +84,30 @@ func (m *mux) newPartLocked(tag byte) *muxConn {
 	return p
 }
 
-// acceptUni hands every uni stream of the connection to its part, until the connection ends.
+// acceptUni hands every uni stream of the connection to its part, until the connection ends and its handoffs with it.
 func (m *mux) acceptUni() {
-	defer m.wg.Wait()
+	var wg sync.WaitGroup
+	defer wg.Wait()
 	for {
 		st, err := m.conn.AcceptUniStream(m.conn.Context())
 		if err != nil {
 			return
 		}
-		m.wg.Go(func() { handoff(m, st, false, func(p *muxConn) chan *kolotransport.ReceiveStream { return p.uni }) })
+		wg.Go(func() { handoff(m, st, false, func(p *muxConn) chan *kolotransport.ReceiveStream { return p.uni }) })
 	}
 }
 
 // acceptBidi is acceptUni for bidi streams. It starts once the peer's hello is proven: before that, the inviter may
 // need the connection's bidi streams.
 func (m *mux) acceptBidi() {
-	defer m.wg.Wait()
+	var wg sync.WaitGroup
+	defer wg.Wait()
 	for {
 		st, err := m.conn.AcceptStream(m.conn.Context())
 		if err != nil {
 			return
 		}
-		m.wg.Go(func() { handoff(m, st, true, func(p *muxConn) chan *kolotransport.Stream { return p.bidi }) })
+		wg.Go(func() { handoff(m, st, true, func(p *muxConn) chan *kolotransport.Stream { return p.bidi }) })
 	}
 }
 
